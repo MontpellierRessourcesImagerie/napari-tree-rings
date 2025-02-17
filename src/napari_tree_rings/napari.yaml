@@ -9,29 +9,13 @@ contributions:
     - id: napari-tree-rings.make_sample_data
       python_name: napari_tree_rings._sample_data:make_sample_data
       title: Load sample data from Napari Tree Rings
-    - id: napari-tree-rings.make_container_widget
-      python_name: napari_tree_rings:ImageThreshold
-      title: Make threshold Container widget
-    - id: napari-tree-rings.make_magic_widget
-      python_name: napari_tree_rings:threshold_magic_widget
-      title: Make threshold magic widget
-    - id: napari-tree-rings.make_function_widget
-      python_name: napari_tree_rings:threshold_autogenerate_widget
-      title: Make threshold function widget
-    - id: napari-tree-rings.make_qwidget
-      python_name: napari_tree_rings:ExampleQWidget
-      title: Make example QWidget
+    - id: napari-tree-rings.segment_trunk_widget
+      python_name: napari_tree_rings._widget:SegmentTrunkWidget
+      title: Segment Trunk
   sample_data:
     - command: napari-tree-rings.make_sample_data
       display_name: Napari Tree Rings
       key: unique_id.1
   widgets:
-    - command: napari-tree-rings.make_container_widget
-      display_name: Container Threshold
-    - command: napari-tree-rings.make_magic_widget
-      display_name: Magic Threshold
-    - command: napari-tree-rings.make_function_widget
-      autogenerate: true
-      display_name: Autogenerate Threshold
-    - command: napari-tree-rings.make_qwidget
-      display_name: Example QWidget
+    - command: napari-tree-rings.segment_trunk_widget
+      display_name: Segment Trunk
