@@ -34,7 +34,9 @@ from typing import TYPE_CHECKING
 from qtpy.QtWidgets import QHBoxLayout, QPushButton, QWidget
 from napari.layers.image.image import Image
 from napari_tree_rings.image.fiji import SegmentTrunk
+from napari_tree_rings.image.fiji import FIJI
 from napari.layers import Image, Layer
+from napari_tree_rings.progress import IndeterminedProgressThread
 from typing import Iterable
 if TYPE_CHECKING:
     import napari
@@ -47,12 +49,21 @@ class SegmentTrunkWidget(QWidget):
     def __init__(self, viewer: "napari.viewer.Viewer"):
         super().__init__()
         self.viewer = viewer
+        self.runButton = None
+        self.createLayout()
+        startupWorker = FIJI.startUpThread()
+        startupWorker.returned.connect(self.onStartUpFinished)
+        self.startUpProgress = IndeterminedProgressThread("Initializing FIJI...")
+        self.startUpProgress.start()
+        startupWorker.start()
 
-        btn = QPushButton("&Run")
-        btn.clicked.connect(self._on_click)
 
+    def createLayout(self):
+        self.runButton = QPushButton("&Run")
+        self.runButton.clicked.connect(self.onRunButtonPressed)
+        self.runButton.setEnabled(False)
         self.setLayout(QHBoxLayout())
-        self.layout().addWidget(btn)
+        self.layout().addWidget(self.runButton)
 
 
     def getActiveLayer(self):
@@ -65,7 +76,12 @@ class SegmentTrunkWidget(QWidget):
         return layer
 
 
-    def _on_click(self):
+    def onStartUpFinished(self):
+        self.startUpProgress.stop()
+        self.runButton.setEnabled(True)
+
+
+    def onRunButtonPressed(self):
         layer = self.getActiveLayer()
         if not layer or not type(layer) is Image:
             return
