@@ -1,12 +1,28 @@
 import os
+import sys
+import abc
+import imagej
+from scyjava import jimport
 from napari_imagej import settings
+
 
 class FIJI(object):
 
     instance = None
 
     def __init__(self):
+        super(FIJI, self).__init__()
         self.imageJPath = settings.basedir()
+        self.ij = imagej.init(self.getImageJPath())
+        from napari_imagej.types.converters import install_converters
+        install_converters()
+
+
+    @classmethod
+    def getInstance(cls):
+        if not FIJI.instance:
+            FIJI.instance = FIJI()
+        return FIJI.instance
 
 
     def getImageJPath(self):
@@ -19,30 +35,33 @@ class FIJI(object):
         return path
 
 
-    def getSegmentTrunkPluginPath(self):
-        pluginPath = self.getImageJPluginsPath()
+class FIJICommand(object):
+    __metaclass__ = abc.ABCMeta
+
+
+    def __init__(self):
+        super(FIJICommand, self).__init__()
+        self.fiji = FIJI.getInstance()
+        self.options = self.readOptions()
+
+
+
+    def getPluginPath(self):
+        pluginPath = self.fiji.getImageJPluginsPath()
         path = os.path.join(pluginPath, "mri-tree-rings-tool")
         return path
 
 
-    def getSegmentTrunkOptionsPath(self):
-        segmentTrunkPluginPath = self.getSegmentTrunkPluginPath()
-        path = os.path.join(segmentTrunkPluginPath, "tra-options.txt")
-        return path
+    @abc.abstractmethod
+    def getOptionsPath(self):
+        """
+        Answer the path to the options text file of the command.
+        """
+        return ""
 
 
     @classmethod
-    def getDefaultSegmentTrunkOptions(cls):
-        options = {'scale': 8, 'sigma': 2, 'thresholding': 'Mean',
-                   'opening': 16, 'closing': 8, 'stroke': 8, 'interpolation': 100,
-                   'vectors': '0.7372839,0.63264143,0.23701741,0.91958255,0.35537627,0.16755785,0.69067574,0.64728355,0.3224746',
-                   'bark': '0.7898954,0.5587874,0.25262988,0.5932292,0.7353205,0.3276933,0.57844025,0.5767322,0.5768768',
-                   'min': 200, 'do': False}
-        return options
-
-
-    @classmethod
-    def getSegmentTrunkOptionsString(cls, options):
+    def getOptionsString(cls, options):
         optionsString = ""
         index = 0
         for key, value in options.items():
@@ -57,19 +76,22 @@ class FIJI(object):
         return optionsString
 
 
-    def writeSegmentTrunkOptions(self, options):
-        optionsString = self.getSegmentTrunkOptionsString(options)
-        path = self.getSegmentTrunkOptionsPath()
-        with open(path, 'w') as f:
-            f.write(optionsString)
+    @classmethod
+    def getDefaultOptions(cls):
+        options = {'scale': 8, 'sigma': 2, 'thresholding': 'Mean',
+                   'opening': 16, 'closing': 8, 'stroke': 8, 'interpolation': 100,
+                   'vectors': '0.7372839,0.63264143,0.23701741,0.91958255,0.35537627,0.16755785,0.69067574,0.64728355,0.3224746',
+                   'bark': '0.7898954,0.5587874,0.25262988,0.5932292,0.7353205,0.3276933,0.57844025,0.5767322,0.5768768',
+                   'min': 200, 'do': False}
+        return options
 
 
-    def readSegmentTrunkOptions(self):
-        path = self.getSegmentTrunkOptionsPath()
-        options = self.getDefaultSegmentTrunkOptions()
+    def readOptions(self):
+        path = self.getOptionsPath()
+        options = self.getDefaultOptions()
         content = ""
         if not os.path.exists(path):
-            self.writeSegmentTrunkOptions(options)
+            self.writeOptions(options)
         with open(path, "r") as file:
             content = file.readlines()
         lines = content[0].split(' ')
@@ -82,4 +104,37 @@ class FIJI(object):
         return options
 
 
+    def writeOptions(self, options):
+        optionsString = self.getOptionsString(options)
+        path = self.getOptionsPath()
+        with open(path, 'w') as f:
+            f.write(optionsString)
 
+
+
+class SegmentTrunk(FIJICommand):
+
+
+    def __init__(self, layer):
+        super(SegmentTrunk, self).__init__()
+        self.layer = layer
+        self.image = self.fiji.ij.py.to_java(layer)
+        ImageJFunctions = jimport("net.imglib2.img.display.imagej.ImageJFunctions")
+        self.image = ImageJFunctions.wrap(self.image, "tree")
+        self.result = None
+
+
+    def getOptionsPath(self):
+        segmentTrunkPluginPath = self.getPluginPath()
+        path = os.path.join(segmentTrunkPluginPath, "tra-options.txt")
+        return path
+
+
+    def run(self):
+        IJ = jimport("ij.IJ")
+        self.image.show()
+        IJ.run(self.image, "segment trunk", self.getOptionsString(self.options))
+        ids = self.fiji.ij.get("net.imagej.display.ImageDisplayService")
+        view = ids.getActiveDatasetView(ids.getActiveImageDisplay())
+        self.image.close()
+        self.result = self.fiji.ij.py.from_java(view)

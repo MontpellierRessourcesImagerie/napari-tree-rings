@@ -31,12 +31,11 @@ Replace code below according to your needs.
 
 from typing import TYPE_CHECKING
 
-from magicgui import magic_factory
-from magicgui.widgets import CheckBox, Container, create_widget
 from qtpy.QtWidgets import QHBoxLayout, QPushButton, QWidget
 from napari.layers.image.image import Image
-from skimage.util import img_as_float
-
+from napari_tree_rings.image.fiji import SegmentTrunk
+from napari.layers import Image, Layer
+from typing import Iterable
 if TYPE_CHECKING:
     import napari
 
@@ -49,7 +48,7 @@ class SegmentTrunkWidget(QWidget):
         super().__init__()
         self.viewer = viewer
 
-        btn = QPushButton("Click me!")
+        btn = QPushButton("&Run")
         btn.clicked.connect(self._on_click)
 
         self.setLayout(QHBoxLayout())
@@ -67,10 +66,24 @@ class SegmentTrunkWidget(QWidget):
 
 
     def _on_click(self):
-
         layer = self.getActiveLayer()
-        if not layer:
+        if not layer or not type(layer) is Image:
             return
-        if not type(layer) is Image:
-            return
-        print("napari has", len(self.viewer.layers), "layers")
+        segmentTrunk = SegmentTrunk(layer)
+        segmentTrunk.run()
+        py_image = segmentTrunk.result
+        for _, v in py_image.metadata.items():
+            if isinstance(v, Layer):
+                self.viewer.add_layer(v)
+                v.edge_color = "Red"
+                v.edge_width = 40
+                v.blending = 'minimum'
+                v.refresh()
+            elif isinstance(v, Iterable):
+                for itm in v:
+                    if isinstance(itm, Layer):
+                        self.viewer.add_layer(itm)
+                        itm.edge_color = "Red"
+                        itm.edge_width = 40
+                        itm.blending = 'minimum'
+                        itm.refresh()
