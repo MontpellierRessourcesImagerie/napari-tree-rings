@@ -1,9 +1,11 @@
 import os
-import sys
 import abc
 import imagej
+import jpype
 from scyjava import jimport
 from napari_imagej import settings
+from napari.qt.threading import create_worker
+
 
 
 class FIJI(object):
@@ -25,6 +27,12 @@ class FIJI(object):
         return FIJI.instance
 
 
+    @classmethod
+    def getStartUpThread(cls):
+        worker = create_worker(FIJI.getInstance)
+        return worker
+
+
     def getImageJPath(self):
         return self.imageJPath
 
@@ -35,6 +43,13 @@ class FIJI(object):
         return path
 
 
+    @classmethod
+    def shutDown(cls):
+        FIJI.instance = None
+        jpype.shutdownJVM()
+
+
+
 class FIJICommand(object):
     __metaclass__ = abc.ABCMeta
 
@@ -43,7 +58,6 @@ class FIJICommand(object):
         super(FIJICommand, self).__init__()
         self.fiji = FIJI.getInstance()
         self.options = self.readOptions()
-
 
 
     def getPluginPath(self):
@@ -130,6 +144,11 @@ class SegmentTrunk(FIJICommand):
         return path
 
 
+    def getRunThread(self):
+        worker = create_worker(self.run)
+        return worker
+
+
     def run(self):
         IJ = jimport("ij.IJ")
         self.image.show()
@@ -138,3 +157,4 @@ class SegmentTrunk(FIJICommand):
         view = ids.getActiveDatasetView(ids.getActiveImageDisplay())
         self.image.close()
         self.result = self.fiji.ij.py.from_java(view)
+
