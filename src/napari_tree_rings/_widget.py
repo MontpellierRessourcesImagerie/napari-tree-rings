@@ -7,15 +7,17 @@ import weakref
 from typing import TYPE_CHECKING
 from pathlib import Path
 from PyQt5.QtGui import QIcon
-from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QPushButton, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QFormLayout, QPushButton, QWidget
 from qtpy.QtWidgets import QApplication
+from qtpy.QtWidgets import QTableWidgetItem
 from scyjava import jimport
 from napari_tree_rings.image.fiji import SegmentTrunk
 from napari_tree_rings.image.fiji import FIJI
 from napari.layers import Image, Layer
 from napari_tree_rings.image.file_util import TiffFileTags
 from napari_tree_rings.progress import IndeterminedProgressThread
-from napari_tree_rings.qtutil import WidgetTool
+from napari_tree_rings.qtutil import WidgetTool, TableView
+from napari_tree_rings.image.measure import MeasureShape
 from typing import Iterable
 if TYPE_CHECKING:
     import napari
@@ -34,8 +36,11 @@ class SegmentTrunkWidget(QWidget):
         self.segmentTrunk = None
         self.tiffFileTags = None
         self.layer = None
+        self.measurements = {}
+        self.table = TableView(self.measurements)
         self.segmentTrunkOptionsButton = None
         self.createLayout()
+        self.measureTrunk = None
         startupWorker = FIJI.getStartUpThread()
         startupWorker.returned.connect(self.onStartUpFinished)
         self.startUpProgress = IndeterminedProgressThread("Initializing FIJI...")
@@ -43,6 +48,7 @@ class SegmentTrunkWidget(QWidget):
         startupWorker.start()
         app = QApplication.instance()
         app.lastWindowClosed.connect(self.onCloseApplication)
+        self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements', tabify=False)
 
 
     def createLayout(self):
@@ -85,10 +91,9 @@ class SegmentTrunkWidget(QWidget):
             self.tiffFileTags = TiffFileTags(self.layer.source.path)
             worker = self.tiffFileTags.getPixelSizeAndUnitWorker()
             worker.returned.connect(self.onGetPixelSizeReturned)
-            worker.start()
             self.pixelSizeProgress = IndeterminedProgressThread("Reading pixel size and unit...")
             self.pixelSizeProgress.start()
-
+            worker.start()
 
 
     def onOptionsButtonPressed(self):
@@ -104,7 +109,7 @@ class SegmentTrunkWidget(QWidget):
         self.pixelSizeProgress.stop()
         self.segmentTrunk = SegmentTrunk(self.layer)
         runThread = self.segmentTrunk.getRunThread()
-        runThread.finished.connect(self.onSegmentTrunkFinished)
+        runThread.returned.connect(self.onSegmentTrunkFinished)
         self.runProgress = IndeterminedProgressThread("Segmenting the trunk...")
         self.runProgress.start()
         runThread.start()
@@ -112,28 +117,45 @@ class SegmentTrunkWidget(QWidget):
 
     def onSegmentTrunkFinished(self):
         py_image = self.segmentTrunk.result
+        shapeLayer = None
         for _, v in py_image.metadata.items():
             if isinstance(v, Layer):
-                self.viewer.add_layer(v)
-                v.edge_color = "Red"
-                v.edge_width = 40
-                v.blending = 'minimum'
-                v.refresh()
-                v.scale = self.layer.scale
-                v.units = self.layer.units
-                v.source.parent = weakref.ref(self.layer)
+                self.addTrunkSegmentationToViewer(v)
+                shapeLayer = v
             elif isinstance(v, Iterable):
                 for itm in v:
                     if isinstance(itm, Layer):
-                        self.viewer.add_layer(itm)
-                        itm.edge_color = "Red"
-                        itm.edge_width = 40
-                        itm.blending = 'minimum'
-                        itm.scale = self.layer.scale
-                        itm.units = self.layer.units
-                        itm.source.parent = weakref.ref(self.layer)
-                        itm.refresh()
+                        self.addTrunkSegmentationToViewer(itm)
+                        shapeLayer = itm
         self.runProgress.stop()
+        self.measureTrunk = MeasureShape(shapeLayer, "trunk")
+        worker = self.measureTrunk.getRunThread()
+        worker.returned.connect(self.onMeasureTrunkFinished)
+        self.runProgress = IndeterminedProgressThread("Measuring...")
+        self.runProgress.start()
+        worker.start()
+
+
+    def onMeasureTrunkFinished(self):
+        self.measureTrunk.addToTable(self.measurements)
+        self.tableDockWidget.close()
+        self.table = TableView(self.measurements)
+        self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
+                                                                  tabify=False)
+        self.runProgress.stop()
+
+
+    def addTrunkSegmentationToViewer(self, v):
+        self.viewer.add_layer(v)
+        v.edge_color = "Red"
+        v.edge_width = 40
+        v.blending = 'minimum'
+        v.scale = self.layer.scale
+        v.units = self.layer.units
+        v.metadata['parent'] = self.layer
+        v.metadata['parent_path'] = self.layer.source.path
+        v.name = 'trunk of ' + self.layer.name
+        v.refresh()
 
 
     def onCloseApplication(self):
@@ -142,19 +164,31 @@ class SegmentTrunkWidget(QWidget):
         System.exit(0)
 
 
-class SegmentTrungOptionsWidget(QWidget):
+
+class SegmentTrunkOptionsWidget(QWidget):
+
 
     def __init__(self, viewer: "napari.viewer.Viewer"):
         super().__init__()
         self.viewer = viewer
+        self.segmentTrunk = SegmentTrunk(None)
+        self.options = self.segmentTrunk.options
+        self.scaleFactorInput = None
+        self.fieldWidth = 50
         self.createLayout()
 
 
     def createLayout(self):
-        pass
-        '''
-        WidgetTool.getLineInput("Scale Factor", )
+        scaleFactorLabel, self.scaleFactorInput = WidgetTool.getLineInput(self, "Scale Factor",
+                                                                          self.options['scale'],
+                                                                          self.fieldWidth,
+                                                                          self.scaleFactorChanged)
         mainLayout = QVBoxLayout()
-        mainLayout.addLayout(segmentLayout)
+        formLayout = QFormLayout()
+        formLayout.addRow(scaleFactorLabel, self.scaleFactorInput)
+        mainLayout.addLayout(formLayout)
         self.setLayout(mainLayout)
-        '''
+
+
+    def scaleFactorChanged(self):
+        print("scale factor changed")

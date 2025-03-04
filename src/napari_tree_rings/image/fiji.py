@@ -21,6 +21,14 @@ class FIJI(object):
 
 
     @classmethod
+    def getAutoThresholdingMethods(cls):
+        fiji = cls.getInstance()
+        AutoThresholder = jimport("ij.process.AutoThresholder")
+        methods = AutoThresholder.getMethods()
+        return methods
+
+
+    @classmethod
     def getInstance(cls):
         if not FIJI.instance:
             FIJI.instance = FIJI()
@@ -92,11 +100,7 @@ class FIJICommand(object):
 
     @classmethod
     def getDefaultOptions(cls):
-        options = {'scale': 8, 'sigma': 2, 'thresholding': 'Mean',
-                   'opening': 16, 'closing': 8, 'stroke': 8, 'interpolation': 100,
-                   'vectors': '0.7372839,0.63264143,0.23701741,0.91958255,0.35537627,0.16755785,0.69067574,0.64728355,0.3224746',
-                   'bark': '0.7898954,0.5587874,0.25262988,0.5932292,0.7353205,0.3276933,0.57844025,0.5767322,0.5768768',
-                   'min': 200, 'do': False}
+        options = {}
         return options
 
 
@@ -132,9 +136,10 @@ class SegmentTrunk(FIJICommand):
     def __init__(self, layer):
         super(SegmentTrunk, self).__init__()
         self.layer = layer
-        self.image = self.fiji.ij.py.to_java(layer)
-        ImageJFunctions = jimport("net.imglib2.img.display.imagej.ImageJFunctions")
-        self.image = ImageJFunctions.wrap(self.image, "tree")
+        if layer:
+            self.image = self.fiji.ij.py.to_java(layer)
+            ImageJFunctions = jimport("net.imglib2.img.display.imagej.ImageJFunctions")
+            self.image = ImageJFunctions.wrap(self.image, "tree")
         self.result = None
 
 
@@ -147,6 +152,16 @@ class SegmentTrunk(FIJICommand):
     def getRunThread(self):
         worker = create_worker(self.run)
         return worker
+
+
+    @classmethod
+    def getDefaultOptions(cls):
+        options = {'scale': 8, 'sigma': 2, 'thresholding': 'Mean',
+                   'opening': 16, 'closing': 8, 'stroke': 8, 'interpolation': 100,
+                   'vectors': '0.7372839,0.63264143,0.23701741,0.91958255,0.35537627,0.16755785,0.69067574,0.64728355,0.3224746',
+                   'bark': '0.7898954,0.5587874,0.25262988,0.5932292,0.7353205,0.3276933,0.57844025,0.5767322,0.5768768',
+                   'min': 200, 'do': False}
+        return options
 
 
     def run(self):

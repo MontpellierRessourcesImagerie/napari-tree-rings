@@ -92,23 +92,36 @@ class TableView(QTableWidget):
         QTableWidget.__init__(self, rows, columns, *args)
         self.data = data
         self.__setData()
-        self.resizeColumnsToContents()
-        self.resizeRowsToContents()
         self.setContextMenuPolicy(Qt.ActionsContextMenu)
         copyAction = QAction("Copy\tCtrl+C", self)
         copyAction.triggered.connect(self.copyDataToClipboard)
         self.addAction(copyAction)
 
 
+    def setData(self, table):
+        self.clear()
+        self.data = table
+        self.__setData()
+
+
+    def resetView(self):
+        self.clear()
+        self.__setData()
+
+
     def __setData(self):
         horHeaders = []
+        print("data 1", self.data)
         for n, key in enumerate(self.data.keys()):
             horHeaders.append(key)
             for m, item in enumerate(self.data[key]):
-                newitem = QTableWidgetItem(str(item))
-                newitem.setTextAlignment(Qt.AlignRight)
-                self.setItem(m, n, newitem)
+                newItem = QTableWidgetItem(str(item))
+                newItem.setTextAlignment(Qt.AlignRight)
+                self.setItem(m, n, newItem)
         self.setHorizontalHeaderLabels(horHeaders)
+        self.resizeColumnsToContents()
+        self.resizeRowsToContents()
+        print("data 2", self.data)
 
 
     def keyPressEvent(self, event):
