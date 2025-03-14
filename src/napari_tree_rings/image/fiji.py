@@ -25,6 +25,7 @@ class FIJI(object):
         fiji = cls.getInstance()
         AutoThresholder = jimport("ij.process.AutoThresholder")
         methods = AutoThresholder.getMethods()
+        methods = [str(method) for method in methods]
         return methods
 
 
@@ -124,9 +125,15 @@ class FIJICommand(object):
 
     def writeOptions(self, options):
         optionsString = self.getOptionsString(options)
+        print("options", optionsString)
         path = self.getOptionsPath()
+        print("path", path)
         with open(path, 'w') as f:
             f.write(optionsString)
+
+
+    def saveOptions(self):
+        self.writeOptions(self.options)
 
 
 
@@ -165,6 +172,7 @@ class SegmentTrunk(FIJICommand):
 
 
     def run(self):
+        self.readOptions()
         IJ = jimport("ij.IJ")
         self.image.show()
         IJ.run(self.image, "segment trunk", self.getOptionsString(self.options))

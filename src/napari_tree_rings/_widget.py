@@ -7,6 +7,7 @@ import weakref
 from typing import TYPE_CHECKING
 from pathlib import Path
 from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import Qt
 from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QFormLayout, QPushButton, QWidget
 from qtpy.QtWidgets import QApplication
 from qtpy.QtWidgets import QTableWidgetItem
@@ -97,7 +98,8 @@ class SegmentTrunkWidget(QWidget):
 
 
     def onOptionsButtonPressed(self):
-        SegmentTrunk.showOptionsDialog()
+        optionsWidget = SegmentTrunkOptionsWidget(self.viewer)
+        self.viewer.window.add_dock_widget(optionsWidget, area='right', name='Options of Segment Trunk ')
 
 
     def onGetPixelSizeReturned(self):
@@ -168,27 +170,147 @@ class SegmentTrunkWidget(QWidget):
 class SegmentTrunkOptionsWidget(QWidget):
 
 
-    def __init__(self, viewer: "napari.viewer.Viewer"):
+    def __init__(self, viewer):
         super().__init__()
         self.viewer = viewer
         self.segmentTrunk = SegmentTrunk(None)
         self.options = self.segmentTrunk.options
         self.scaleFactorInput = None
-        self.fieldWidth = 50
+        self.sigmaInput = None
+        self.thresholdingChoice = None
+        self.openingInput = None
+        self.closingInput = None
+        self.strokeWidthInput = None
+        self.interpolationInput = None
+        self.vectorsInput = None
+        self.barkVectorsInput = None
+        self.fieldWidth = 200
+        self.thresholdingMethods = FIJI.getAutoThresholdingMethods()
         self.createLayout()
 
 
     def createLayout(self):
-        scaleFactorLabel, self.scaleFactorInput = WidgetTool.getLineInput(self, "Scale Factor",
+        scaleFactorLabel, self.scaleFactorInput = WidgetTool.getLineInput(self, "Scale Factor: ",
                                                                           self.options['scale'],
                                                                           self.fieldWidth,
                                                                           self.scaleFactorChanged)
+        sigmaLabel, self.sigmaInput = WidgetTool.getLineInput(self, "Sigma: ",
+                                                                          self.options['sigma'],
+                                                                          self.fieldWidth,
+                                                                          self.sigmaChanged)
+        thresholdingMethodLabel, self.thresholdingChoice = WidgetTool.getComboInput(self,
+                                                                                         "Thresholding Method: ",
+                                                                                         self.thresholdingMethods)
+        self.thresholdingChoice.setCurrentText(self.segmentTrunk.options['thresholding'])
+        openingRadiusLabel, self.openingInput = WidgetTool.getLineInput(self, "Opening radius: ",
+                                                              self.options['opening'],
+                                                              self.fieldWidth,
+                                                              self.openingChanged)
+        closingRadiusLabel, self.closingInput = WidgetTool.getLineInput(self, "Closing radius: ",
+                                                              self.options['closing'],
+                                                              self.fieldWidth,
+                                                              self.closingChanged)
+        strokeWidthLabel, self.strokeWidthInput = WidgetTool.getLineInput(self, "Stroke width: ",
+                                                                          self.options['stroke'],
+                                                                          self.fieldWidth,
+                                                                          self.strokeWidthChanged)
+        interpolationLabel, self.interpolationInput = WidgetTool.getLineInput(self, "Interpolation interval: ",
+                                                                              self.options['interpolation'],
+                                                                              self.fieldWidth,
+                                                                              self.interpolationIntervalChanged)
+        vectorsLabel, self.vectorsInput = WidgetTool.getLineInput(self, "Vectors: ",
+                                                                  self.options['vectors'],
+                                                                  self.fieldWidth,
+                                                                  self.vectorsChanged)
+        barkLabel, self.barkVectorsInput = WidgetTool.getLineInput(self, "Bark Vectors: ",
+                                                            self.options['bark'],
+                                                            self.fieldWidth,
+                                                            self.barkChanged)
+        saveButton = QPushButton("&Save")
+        saveButton.clicked.connect(self.saveOptionsButtonPressed)
+        saveAndCloseButton = QPushButton("Save && Close")
+        saveAndCloseButton.clicked.connect(self.saveAndCloseButtonPressed)
+        cancelAndCloseButton = QPushButton("&Cancel && Close")
+        cancelAndCloseButton.clicked.connect(self.cancelAndCloseButtonPressed)
+        buttonsLayout = QHBoxLayout()
+        buttonsLayout.addWidget(saveButton)
+        buttonsLayout.addWidget(saveAndCloseButton)
+        buttonsLayout.addWidget(cancelAndCloseButton)
         mainLayout = QVBoxLayout()
         formLayout = QFormLayout()
+        formLayout.setLabelAlignment(Qt.AlignRight)
         formLayout.addRow(scaleFactorLabel, self.scaleFactorInput)
+        formLayout.addRow(sigmaLabel, self.sigmaInput)
+        formLayout.addRow(thresholdingMethodLabel, self.thresholdingChoice)
+        formLayout.addRow(openingRadiusLabel, self.openingInput)
+        formLayout.addRow(closingRadiusLabel, self.closingInput)
+        formLayout.addRow(strokeWidthLabel, self.strokeWidthInput)
+        formLayout.addRow(interpolationLabel, self.interpolationInput)
+        formLayout.addRow(vectorsLabel, self.vectorsInput)
+        formLayout.addRow(barkLabel, self.barkVectorsInput)
         mainLayout.addLayout(formLayout)
+        mainLayout.addLayout(buttonsLayout)
         self.setLayout(mainLayout)
 
 
     def scaleFactorChanged(self):
         print("scale factor changed")
+
+
+    def sigmaChanged(self):
+        pass
+
+
+    def openingChanged(self):
+        pass
+
+
+    def closingChanged(self):
+        pass
+
+
+    def strokeWidthChanged(self):
+        pass
+
+
+    def interpolationIntervalChanged(self):
+        pass
+
+
+    def vectorsChanged(self):
+        pass
+
+
+    def barkChanged(self):
+        pass
+
+
+    def setOptionsFromDialog(self):
+        self.segmentTrunk.options['scale'] = int(self.scaleFactorInput.text().strip())
+        self.segmentTrunk.options['sigma'] = float(self.sigmaInput.text().strip())
+        self.segmentTrunk.options['thresholding'] = self.thresholdingChoice.currentText().strip()
+        self.segmentTrunk.options['opening'] = int(self.openingInput.text().strip())
+        self.segmentTrunk.options['closing'] = int(self.closingInput.text().strip())
+        self.segmentTrunk.options['stroke'] = int(self.strokeWidthInput.text().strip())
+        self.segmentTrunk.options['interpolation'] = int(self.interpolationInput.text().strip())
+
+
+    def saveOptionsButtonPressed(self):
+        print("save options button pressed.")
+        self.setOptionsFromDialog()
+        self.segmentTrunk.saveOptions()
+
+
+    def saveAndCloseButtonPressed(self):
+        print("save and close options button pressed.")
+        self.setOptionsFromDialog()
+        self.segmentTrunk.saveOptions()
+        self.viewer.window.remove_dock_widget(self)
+        self.close()
+
+
+    def cancelAndCloseButtonPressed(self):
+        print("cancel and close button pressed.")
+        self.viewer.window.remove_dock_widget(self)
+        self.close()
+
