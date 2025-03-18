@@ -3,19 +3,23 @@ Widgets of the napari-tree-ring plugin.
 """
 
 import os
-import weakref
+import napari
+import time
+from napari.qt.threading import create_worker
 from typing import TYPE_CHECKING
 from pathlib import Path
+import numpy as np
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QGroupBox, QFileDialog
 from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QFormLayout, QPushButton, QWidget
 from qtpy.QtWidgets import QApplication
-from qtpy.QtWidgets import QTableWidgetItem
 from scyjava import jimport
 from napari_tree_rings.image.fiji import SegmentTrunk
 from napari_tree_rings.image.fiji import FIJI
 from napari.layers import Image, Layer
 from napari_tree_rings.image.file_util import TiffFileTags
+import tifffile as tiff
 from napari_tree_rings.progress import IndeterminedProgressThread
 from napari_tree_rings.qtutil import WidgetTool, TableView
 from napari_tree_rings.image.measure import MeasureShape
@@ -31,6 +35,7 @@ class SegmentTrunkWidget(QWidget):
     def __init__(self, viewer: "napari.viewer.Viewer"):
         super().__init__()
         self.viewer = viewer
+        self.fieldWidth = 300
         self.runButton = None
         self.runProgress = None
         self.pixelSizeProgress = None
@@ -40,8 +45,11 @@ class SegmentTrunkWidget(QWidget):
         self.measurements = {}
         self.table = TableView(self.measurements)
         self.segmentTrunkOptionsButton = None
-        self.createLayout()
+        self.sourceFolderInput = None
+        self.outputFolderInput = None
         self.measureTrunk = None
+        self.sourceFolder = str(Path.home())
+        self.outputFolder = str(Path.home())
         startupWorker = FIJI.getStartUpThread()
         startupWorker.returned.connect(self.onStartUpFinished)
         self.startUpProgress = IndeterminedProgressThread("Initializing FIJI...")
@@ -50,6 +58,7 @@ class SegmentTrunkWidget(QWidget):
         app = QApplication.instance()
         app.lastWindowClosed.connect(self.onCloseApplication)
         self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements', tabify=False)
+        self.createLayout()
 
 
     def createLayout(self):
@@ -64,8 +73,41 @@ class SegmentTrunkWidget(QWidget):
         self.segmentTrunkOptionsButton.clicked.connect(self.onOptionsButtonPressed)
         segmentLayout.addWidget(self.runButton)
         segmentLayout.addWidget(self.segmentTrunkOptionsButton)
+        sourceFileLayout = QHBoxLayout()
+        sourceFolderLabel, self.sourceFolderInput = WidgetTool.getLineInput(self, "Source: ",
+                                                              self.sourceFolder,
+                                                              self.fieldWidth,
+                                                              self.sourceFolderChanged)
+        sourceFolderBrowseButton = QPushButton("Browse")
+        sourceFolderBrowseButton.clicked.connect(self.browseSourceFolderClicked)
+        sourceFileLayout.addWidget(sourceFolderLabel)
+        sourceFileLayout.addWidget(self.sourceFolderInput)
+        sourceFileLayout.addWidget(sourceFolderBrowseButton)
+        outputFileLayout = QHBoxLayout()
+        outputFolderLabel, self.outputFolderInput = WidgetTool.getLineInput(self, "Output: ",
+                                                                            self.outputFolder,
+                                                                            self.fieldWidth,
+                                                                            self.outputFolderChanged)
+        outputFolderBrowseButton = QPushButton("Browse")
+        outputFolderBrowseButton.clicked.connect(self.browseOutputFolderClicked)
+        outputFileLayout.addWidget(outputFolderLabel)
+        outputFileLayout.addWidget(self.outputFolderInput)
+        outputFileLayout.addWidget(outputFolderBrowseButton)
+        runBatchLayout = QHBoxLayout()
+        runBatchButton = QPushButton("Run &Batch")
+        runBatchButton.clicked.connect(self.runBatchButtonClicked)
+        runBatchLayout.addWidget(runBatchButton)
+        batchLayout = QVBoxLayout()
+        batchGroupBox = QGroupBox("Batch Segment Trunk")
+        groupBoxLayout = QVBoxLayout()
+        batchGroupBox.setLayout(groupBoxLayout)
+        groupBoxLayout.addLayout(sourceFileLayout)
+        groupBoxLayout.addLayout(outputFileLayout)
+        groupBoxLayout.addLayout(runBatchLayout)
+        batchLayout.addWidget(batchGroupBox)
         mainLayout = QVBoxLayout()
         mainLayout.addLayout(segmentLayout)
+        mainLayout.addLayout(batchLayout)
         self.setLayout(mainLayout)
 
 
@@ -95,6 +137,54 @@ class SegmentTrunkWidget(QWidget):
             self.pixelSizeProgress = IndeterminedProgressThread("Reading pixel size and unit...")
             self.pixelSizeProgress.start()
             worker.start()
+
+
+    def runBatchButtonClicked(self):
+        worker = create_worker(self.batchSegmentImages)
+        worker.finished.connect(self.onBatchFinished)
+        self.runProgress = IndeterminedProgressThread("Batch segmenting trunk...")
+        self.runProgress.start()
+        worker.start()
+
+
+    def onBatchFinished(self):
+        self.runProgress.stop()
+
+
+    def batchSegmentImages(self):
+        imagePaths = os.listdir(self.sourceFolder)
+        self.runProgress.stop()
+        progress = napari.utils.progress(total=len(imagePaths))
+        time.sleep(10)
+        progress.set_description("Batch Segment Trunk")
+        for step, imageFilename in enumerate(imagePaths, start=1):
+            progress.update(step)
+            tiffFileTags = TiffFileTags(os.path.join(self.sourceFolder, imageFilename))
+            tiffFileTags.getPixelSizeAndUnit()
+            img = tiff.imread(os.path.join(self.sourceFolder, imageFilename))
+            imageLayer = Image(np.array(img))
+            imageLayer.scale = (tiffFileTags.pixelSize, tiffFileTags.pixelSize)
+            imageLayer.units = (tiffFileTags.unit, tiffFileTags.unit)
+            segmentTrunk = SegmentTrunk(imageLayer)
+            segmentTrunk.run()
+            py_image = segmentTrunk.result
+            shapeLayer = None
+            for _, v in py_image.metadata.items():
+                if isinstance(v, Layer):
+                    shapeLayer = v
+                elif isinstance(v, Iterable):
+                    for itm in v:
+                        if isinstance(itm, Layer):
+                            shapeLayer = itm
+            measureTrunk = MeasureShape(shapeLayer, "trunk")
+            measureTrunk.do()
+            measureTrunk.addToTable(self.measurements)
+            self.tableDockWidget.close()
+            self.table = TableView(self.measurements)
+            self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
+                                                                      tabify=False)
+            shapeLayer.save(os.path.join(self.outputFolder, imageFilename))
+        progress.close()
 
 
     def onOptionsButtonPressed(self):
@@ -164,6 +254,30 @@ class SegmentTrunkWidget(QWidget):
         print("closing fiji...")
         System = jimport("java.lang.System")
         System.exit(0)
+
+
+    def sourceFolderChanged(self):
+        pass
+
+
+    def outputFolderChanged(self):
+        pass
+
+
+    def browseSourceFolderClicked(self):
+        sourceFolderFromUser = QFileDialog.getExistingDirectory(self, "Source Folder", self.sourceFolder,
+                                                                QFileDialog.ShowDirsOnly)
+        if sourceFolderFromUser:
+            self.sourceFolder = sourceFolderFromUser
+            self.sourceFolderInput.setText(self.sourceFolder)
+
+
+    def browseOutputFolderClicked(self):
+        outputFolderFromUser = QFileDialog.getExistingDirectory(self, "Output Folder", self.outputFolder,
+                                                                QFileDialog.ShowDirsOnly)
+        if outputFolderFromUser:
+            self.outputFolder = outputFolderFromUser
+            self.outputFolderInput.setText(self.outputFolder)
 
 
 
@@ -254,7 +368,7 @@ class SegmentTrunkOptionsWidget(QWidget):
 
 
     def scaleFactorChanged(self):
-        print("scale factor changed")
+        pass
 
 
     def sigmaChanged(self):
