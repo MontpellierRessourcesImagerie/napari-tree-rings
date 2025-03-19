@@ -125,9 +125,7 @@ class FIJICommand(object):
 
     def writeOptions(self, options):
         optionsString = self.getOptionsString(options)
-        print("options", optionsString)
         path = self.getOptionsPath()
-        print("path", path)
         with open(path, 'w') as f:
             f.write(optionsString)
 

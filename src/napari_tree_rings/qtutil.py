@@ -111,7 +111,6 @@ class TableView(QTableWidget):
 
     def __setData(self):
         horHeaders = []
-        print("data 1", self.data)
         for n, key in enumerate(self.data.keys()):
             horHeaders.append(key)
             for m, item in enumerate(self.data[key]):
@@ -121,7 +120,6 @@ class TableView(QTableWidget):
         self.setHorizontalHeaderLabels(horHeaders)
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
-        print("data 2", self.data)
 
 
     def keyPressEvent(self, event):

@@ -4,14 +4,16 @@ Widgets of the napari-tree-ring plugin.
 
 import os
 import napari
-import time
+import datetime
 from napari.qt.threading import create_worker
 from typing import TYPE_CHECKING
 from pathlib import Path
 import numpy as np
-from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QGroupBox, QFileDialog
+from pandas import DataFrame
+from qtpy.QtGui import QIcon
+from qtpy.QtCore import Qt
+from qtpy.QtCore import Slot
+from qtpy.QtWidgets import QGroupBox, QFileDialog
 from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QFormLayout, QPushButton, QWidget
 from qtpy.QtWidgets import QApplication
 from scyjava import jimport
@@ -37,6 +39,7 @@ class SegmentTrunkWidget(QWidget):
         self.viewer = viewer
         self.fieldWidth = 300
         self.runButton = None
+        self.runBatchButton = None
         self.runProgress = None
         self.pixelSizeProgress = None
         self.segmentTrunk = None
@@ -94,9 +97,10 @@ class SegmentTrunkWidget(QWidget):
         outputFileLayout.addWidget(self.outputFolderInput)
         outputFileLayout.addWidget(outputFolderBrowseButton)
         runBatchLayout = QHBoxLayout()
-        runBatchButton = QPushButton("Run &Batch")
-        runBatchButton.clicked.connect(self.runBatchButtonClicked)
-        runBatchLayout.addWidget(runBatchButton)
+        self.runBatchButton = QPushButton("Run &Batch")
+        self.runBatchButton.clicked.connect(self.runBatchButtonClicked)
+        self.runBatchButton.setEnabled(False)
+        runBatchLayout.addWidget(self.runBatchButton)
         batchLayout = QVBoxLayout()
         batchGroupBox = QGroupBox("Batch Segment Trunk")
         groupBoxLayout = QVBoxLayout()
@@ -124,6 +128,7 @@ class SegmentTrunkWidget(QWidget):
     def onStartUpFinished(self):
         self.startUpProgress.stop()
         self.runButton.setEnabled(True)
+        self.runBatchButton.setEnabled(True)
 
 
     def onRunButtonPressed(self):
@@ -140,29 +145,21 @@ class SegmentTrunkWidget(QWidget):
 
 
     def runBatchButtonClicked(self):
-        worker = create_worker(self.batchSegmentImages)
-        worker.finished.connect(self.onBatchFinished)
-        self.runProgress = IndeterminedProgressThread("Batch segmenting trunk...")
-        self.runProgress.start()
+        imagePaths = os.listdir(self.sourceFolder)
+        worker = create_worker(self.batchSegmentImages,
+                      _progress={'total': len(imagePaths), 'desc': 'Batch Segment Trunk'})
+        worker.yielded.connect(self.onTableChanged)
         worker.start()
 
 
-    def onBatchFinished(self):
-        self.runProgress.stop()
-
-
     def batchSegmentImages(self):
-        imagePaths = os.listdir(self.sourceFolder)
-        self.runProgress.stop()
-        progress = napari.utils.progress(total=len(imagePaths))
-        time.sleep(10)
-        progress.set_description("Batch Segment Trunk")
-        for step, imageFilename in enumerate(imagePaths, start=1):
-            progress.update(step)
+        imageFileNames = os.listdir(self.sourceFolder)
+        for step, imageFilename in enumerate(imageFileNames, start=1):
             tiffFileTags = TiffFileTags(os.path.join(self.sourceFolder, imageFilename))
             tiffFileTags.getPixelSizeAndUnit()
             img = tiff.imread(os.path.join(self.sourceFolder, imageFilename))
             imageLayer = Image(np.array(img))
+            imageLayer.name = imageFilename
             imageLayer.scale = (tiffFileTags.pixelSize, tiffFileTags.pixelSize)
             imageLayer.units = (tiffFileTags.unit, tiffFileTags.unit)
             segmentTrunk = SegmentTrunk(imageLayer)
@@ -176,15 +173,22 @@ class SegmentTrunkWidget(QWidget):
                     for itm in v:
                         if isinstance(itm, Layer):
                             shapeLayer = itm
+            shapeLayer.scale =  (tiffFileTags.pixelSize, tiffFileTags.pixelSize)
+            shapeLayer.units =  (tiffFileTags.unit, tiffFileTags.unit)
+            shapeLayer.metadata['parent'] = imageLayer
+            shapeLayer.metadata['parent_path'] = self.sourceFolder
+            shapeLayer.name = 'trunk of ' + imageFilename
             measureTrunk = MeasureShape(shapeLayer, "trunk")
             measureTrunk.do()
             measureTrunk.addToTable(self.measurements)
-            self.tableDockWidget.close()
-            self.table = TableView(self.measurements)
-            self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
-                                                                      tabify=False)
-            shapeLayer.save(os.path.join(self.outputFolder, imageFilename))
-        progress.close()
+            csvFilename = os.path.splitext(imageFilename)[0] + ".csv"
+            path = os.path.join(self.outputFolder, csvFilename)
+            shapeLayer.save(path)
+            yield()
+        time = str(datetime.datetime.now())
+        tablePath = os.path.join(self.outputFolder, time + "_trunk-measurements.csv")
+        df = DataFrame(self.measurements)
+        df.to_csv(tablePath)
 
 
     def onOptionsButtonPressed(self):
@@ -278,6 +282,15 @@ class SegmentTrunkWidget(QWidget):
         if outputFolderFromUser:
             self.outputFolder = outputFolderFromUser
             self.outputFolderInput.setText(self.outputFolder)
+
+
+    @Slot(object)
+    def onTableChanged(self, v):
+        self.table = TableView(self.measurements)
+        self.viewer.window.remove_dock_widget(self.tableDockWidget)
+        self.tableDockWidget.close()
+        self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
+                                                                  tabify=False)
 
 
 
@@ -410,13 +423,11 @@ class SegmentTrunkOptionsWidget(QWidget):
 
 
     def saveOptionsButtonPressed(self):
-        print("save options button pressed.")
         self.setOptionsFromDialog()
         self.segmentTrunk.saveOptions()
 
 
     def saveAndCloseButtonPressed(self):
-        print("save and close options button pressed.")
         self.setOptionsFromDialog()
         self.segmentTrunk.saveOptions()
         self.viewer.window.remove_dock_widget(self)
@@ -424,7 +435,6 @@ class SegmentTrunkOptionsWidget(QWidget):
 
 
     def cancelAndCloseButtonPressed(self):
-        print("cancel and close button pressed.")
         self.viewer.window.remove_dock_widget(self)
         self.close()
 
