@@ -17,14 +17,13 @@ from qtpy.QtWidgets import QGroupBox, QFileDialog
 from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QFormLayout, QPushButton, QWidget
 from qtpy.QtWidgets import QApplication
 from scyjava import jimport
-from napari_tree_rings.image.fiji import SegmentTrunk
 from napari_tree_rings.image.fiji import FIJI
 from napari.layers import Image, Layer
-from napari_tree_rings.image.file_util import TiffFileTags
 import tifffile as tiff
 from napari_tree_rings.progress import IndeterminedProgressThread
 from napari_tree_rings.qtutil import WidgetTool, TableView
-from napari_tree_rings.image.measure import MeasureShape
+from napari_tree_rings.image.process import TrunkSegmenter
+from napari_tree_rings.image.process import BatchSegmentTrunk
 from typing import Iterable
 if TYPE_CHECKING:
     import napari
@@ -40,17 +39,13 @@ class SegmentTrunkWidget(QWidget):
         self.fieldWidth = 300
         self.runButton = None
         self.runBatchButton = None
-        self.runProgress = None
-        self.pixelSizeProgress = None
-        self.segmentTrunk = None
-        self.tiffFileTags = None
-        self.layer = None
+        self.segmenter = None
+        self.batchSegmenter = None
         self.measurements = {}
         self.table = TableView(self.measurements)
         self.segmentTrunkOptionsButton = None
         self.sourceFolderInput = None
         self.outputFolderInput = None
-        self.measureTrunk = None
         self.sourceFolder = str(Path.home())
         self.outputFolder = str(Path.home())
         startupWorker = FIJI.getStartUpThread()
@@ -132,63 +127,35 @@ class SegmentTrunkWidget(QWidget):
 
 
     def onRunButtonPressed(self):
-        self.layer = self.getActiveLayer()
-        if not self.layer or not type(self.layer) is Image:
+        layer = self.getActiveLayer()
+        if not layer or not type(layer) is Image:
             return
-        if self.layer.source.path:
-            self.tiffFileTags = TiffFileTags(self.layer.source.path)
-            worker = self.tiffFileTags.getPixelSizeAndUnitWorker()
-            worker.returned.connect(self.onGetPixelSizeReturned)
-            self.pixelSizeProgress = IndeterminedProgressThread("Reading pixel size and unit...")
-            self.pixelSizeProgress.start()
-            worker.start()
+        self.segmenter = TrunkSegmenter(layer)
+        self.segmenter.measurements = self.measurements
+        worker = create_worker(self.segmenter.run(),
+                               _progress={'total': 4, 'desc': 'Segment Trunk'})
+        worker.finished.connect(self.onSegmentationFinished)
+        worker.start()
+
+
+    @Slot()
+    def onSegmentationFinished(self):
+        self.viewer.scale_bar.unit = self.segmenter.tiffFileTags.unit
+        self.addTrunkSegmentationToViewer(self.segmenter.shapeLayer)
+        self.tableDockWidget.close()
+        self.measurements = self.segmenter.measurements
+        self.table = TableView(self.measurements)
+        self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
+                                                                  tabify=False)
 
 
     def runBatchButtonClicked(self):
         imagePaths = os.listdir(self.sourceFolder)
-        worker = create_worker(self.batchSegmentImages,
-                      _progress={'total': len(imagePaths), 'desc': 'Batch Segment Trunk'})
+        self.batchSegmenter = BatchSegmentTrunk(self.sourceFolder, self.outputFolder)
+        worker = create_worker(self.batchSegmenter.run(),
+                               _progress={'total': len(imagePaths), 'desc': 'Batch Segment Trunk'})
         worker.yielded.connect(self.onTableChanged)
         worker.start()
-
-
-    def batchSegmentImages(self):
-        imageFileNames = os.listdir(self.sourceFolder)
-        for step, imageFilename in enumerate(imageFileNames, start=1):
-            tiffFileTags = TiffFileTags(os.path.join(self.sourceFolder, imageFilename))
-            tiffFileTags.getPixelSizeAndUnit()
-            img = tiff.imread(os.path.join(self.sourceFolder, imageFilename))
-            imageLayer = Image(np.array(img))
-            imageLayer.name = imageFilename
-            imageLayer.scale = (tiffFileTags.pixelSize, tiffFileTags.pixelSize)
-            imageLayer.units = (tiffFileTags.unit, tiffFileTags.unit)
-            segmentTrunk = SegmentTrunk(imageLayer)
-            segmentTrunk.run()
-            py_image = segmentTrunk.result
-            shapeLayer = None
-            for _, v in py_image.metadata.items():
-                if isinstance(v, Layer):
-                    shapeLayer = v
-                elif isinstance(v, Iterable):
-                    for itm in v:
-                        if isinstance(itm, Layer):
-                            shapeLayer = itm
-            shapeLayer.scale =  (tiffFileTags.pixelSize, tiffFileTags.pixelSize)
-            shapeLayer.units =  (tiffFileTags.unit, tiffFileTags.unit)
-            shapeLayer.metadata['parent'] = imageLayer
-            shapeLayer.metadata['parent_path'] = self.sourceFolder
-            shapeLayer.name = 'trunk of ' + imageFilename
-            measureTrunk = MeasureShape(shapeLayer, "trunk")
-            measureTrunk.do()
-            measureTrunk.addToTable(self.measurements)
-            csvFilename = os.path.splitext(imageFilename)[0] + ".csv"
-            path = os.path.join(self.outputFolder, csvFilename)
-            shapeLayer.save(path)
-            yield()
-        time = str(datetime.datetime.now())
-        tablePath = os.path.join(self.outputFolder, time + "_trunk-measurements.csv")
-        df = DataFrame(self.measurements)
-        df.to_csv(tablePath)
 
 
     def onOptionsButtonPressed(self):
@@ -196,61 +163,11 @@ class SegmentTrunkWidget(QWidget):
         self.viewer.window.add_dock_widget(optionsWidget, area='right', name='Options of Segment Trunk ')
 
 
-    def onGetPixelSizeReturned(self):
-        pixelSize = self.tiffFileTags.pixelSize
-        unit = self.tiffFileTags.unit
-        self.layer.scale = (pixelSize, pixelSize)
-        self.layer.units = (unit, unit)
-        self.viewer.scale_bar.unit = unit
-        self.pixelSizeProgress.stop()
-        self.segmentTrunk = SegmentTrunk(self.layer)
-        runThread = self.segmentTrunk.getRunThread()
-        runThread.returned.connect(self.onSegmentTrunkFinished)
-        self.runProgress = IndeterminedProgressThread("Segmenting the trunk...")
-        self.runProgress.start()
-        runThread.start()
-
-
-    def onSegmentTrunkFinished(self):
-        py_image = self.segmentTrunk.result
-        shapeLayer = None
-        for _, v in py_image.metadata.items():
-            if isinstance(v, Layer):
-                self.addTrunkSegmentationToViewer(v)
-                shapeLayer = v
-            elif isinstance(v, Iterable):
-                for itm in v:
-                    if isinstance(itm, Layer):
-                        self.addTrunkSegmentationToViewer(itm)
-                        shapeLayer = itm
-        self.runProgress.stop()
-        self.measureTrunk = MeasureShape(shapeLayer, "trunk")
-        worker = self.measureTrunk.getRunThread()
-        worker.returned.connect(self.onMeasureTrunkFinished)
-        self.runProgress = IndeterminedProgressThread("Measuring...")
-        self.runProgress.start()
-        worker.start()
-
-
-    def onMeasureTrunkFinished(self):
-        self.measureTrunk.addToTable(self.measurements)
-        self.tableDockWidget.close()
-        self.table = TableView(self.measurements)
-        self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
-                                                                  tabify=False)
-        self.runProgress.stop()
-
-
     def addTrunkSegmentationToViewer(self, v):
         self.viewer.add_layer(v)
         v.edge_color = "Red"
         v.edge_width = 40
         v.blending = 'minimum'
-        v.scale = self.layer.scale
-        v.units = self.layer.units
-        v.metadata['parent'] = self.layer
-        v.metadata['parent_path'] = self.layer.source.path
-        v.name = 'trunk of ' + self.layer.name
         v.refresh()
 
 
@@ -285,7 +202,8 @@ class SegmentTrunkWidget(QWidget):
 
 
     @Slot(object)
-    def onTableChanged(self, v):
+    def onTableChanged(self, measurements):
+        self.measurements = measurements
         self.table = TableView(self.measurements)
         self.viewer.window.remove_dock_widget(self.tableDockWidget)
         self.tableDockWidget.close()
