@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from skimage.measure import regionprops_table
 from napari.qt.threading import create_worker
@@ -21,7 +22,7 @@ class Measure(object):
         if 'parent' in self.layer.metadata.keys():
             self.table['image'] = np.array([self.layer.metadata['parent'].name])
         if 'parent_path' in self.layer.metadata.keys():
-            self.table['path'] = np.array([self.layer.metadata['parent_path']])
+            self.table['path'] = np.array([os.path.dirname(self.layer.metadata['parent_path'])])
         else:
             self.table['image'] = np.array([self.layer.name])
         self.table["object_type"] = np.array([self.object_type])

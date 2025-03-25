@@ -4,12 +4,9 @@ Widgets of the napari-tree-ring plugin.
 
 import os
 import napari
-import datetime
 from napari.qt.threading import create_worker
 from typing import TYPE_CHECKING
 from pathlib import Path
-import numpy as np
-from pandas import DataFrame
 from qtpy.QtGui import QIcon
 from qtpy.QtCore import Qt
 from qtpy.QtCore import Slot
@@ -17,14 +14,15 @@ from qtpy.QtWidgets import QGroupBox, QFileDialog
 from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QFormLayout, QPushButton, QWidget
 from qtpy.QtWidgets import QApplication
 from scyjava import jimport
-from napari_tree_rings.image.fiji import FIJI
-from napari.layers import Image, Layer
-import tifffile as tiff
+from napari.layers import Image
 from napari_tree_rings.progress import IndeterminedProgressThread
 from napari_tree_rings.qtutil import WidgetTool, TableView
 from napari_tree_rings.image.process import TrunkSegmenter
 from napari_tree_rings.image.process import BatchSegmentTrunk
-from typing import Iterable
+from napari_tree_rings.image.fiji import FIJI
+from napari_tree_rings.image.fiji import SegmentTrunk
+
+
 if TYPE_CHECKING:
     import napari
 
@@ -130,11 +128,21 @@ class SegmentTrunkWidget(QWidget):
         layer = self.getActiveLayer()
         if not layer or not type(layer) is Image:
             return
+        layer.metadata['path'] = layer.source.path
         self.segmenter = TrunkSegmenter(layer)
         self.segmenter.measurements = self.measurements
-        worker = create_worker(self.segmenter.run(),
+        worker = create_worker(self.segmenter.run,
                                _progress={'total': 4, 'desc': 'Segment Trunk'})
         worker.finished.connect(self.onSegmentationFinished)
+        worker.start()
+
+
+    def runBatchButtonClicked(self):
+        imagePaths = os.listdir(self.sourceFolder)
+        self.batchSegmenter = BatchSegmentTrunk(self.sourceFolder, self.outputFolder)
+        worker = create_worker(self.batchSegmenter.run,
+                               _progress={'total': len(imagePaths), 'desc': 'Batch Segment Trunk'})
+        worker.yielded.connect(self.onTableChanged)
         worker.start()
 
 
@@ -147,16 +155,6 @@ class SegmentTrunkWidget(QWidget):
         self.table = TableView(self.measurements)
         self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
                                                                   tabify=False)
-
-
-    def runBatchButtonClicked(self):
-        imagePaths = os.listdir(self.sourceFolder)
-        self.batchSegmenter = BatchSegmentTrunk(self.sourceFolder, self.outputFolder)
-        worker = create_worker(self.batchSegmenter.run(),
-                               _progress={'total': len(imagePaths), 'desc': 'Batch Segment Trunk'})
-        worker.yielded.connect(self.onTableChanged)
-        worker.start()
-
 
     def onOptionsButtonPressed(self):
         optionsWidget = SegmentTrunkOptionsWidget(self.viewer)

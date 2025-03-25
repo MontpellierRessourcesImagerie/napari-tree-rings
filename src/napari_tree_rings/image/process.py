@@ -5,8 +5,6 @@ import datetime
 from pandas import DataFrame
 from typing import Iterable
 from napari.layers import Image, Layer
-from triangle.plot import segments
-
 from napari_tree_rings.image.fiji import SegmentTrunk
 from napari_tree_rings.image.file_util import TiffFileTags
 from napari_tree_rings.image.measure import MeasureShape
@@ -26,21 +24,17 @@ class TrunkSegmenter:
 
 
     def run(self):
-        if not self.batchMode:
-            yield
+        yield
         self.setPixelSizeAndUnit()
-        if not self.batchMode:
-            yield
+        yield
         self.segmentTrunk()
-        if not self.batchMode:
-            yield
+        yield
         self.measureTrunk()
-        if not self.batchMode:
-            yield
+        yield
 
 
     def setPixelSizeAndUnit(self):
-        self.tiffFileTags = TiffFileTags(self.layer.source.path)
+        self.tiffFileTags = TiffFileTags(self.layer.metadata['path'])
         self.tiffFileTags.getPixelSizeAndUnit()
         pixelSize = self.tiffFileTags.pixelSize
         unit = self.tiffFileTags.unit
@@ -49,7 +43,7 @@ class TrunkSegmenter:
 
 
     def segmentTrunk(self):
-        SegmentTrunk(self.layer)
+        self.segmentTrunkOp = SegmentTrunk(self.layer)
         self.segmentTrunkOp.run()
         py_image = self.segmentTrunkOp.result
         shapeLayer = None
@@ -63,7 +57,7 @@ class TrunkSegmenter:
         shapeLayer.scale = self.layer.scale
         shapeLayer.units = self.layer.units
         shapeLayer.metadata['parent'] = self.layer
-        shapeLayer.metadata['parent_path'] = self.layer.source.path
+        shapeLayer.metadata['parent_path'] = self.layer.metadata['path']
         shapeLayer.name = 'trunk of ' + self.layer.name
         self.shapeLayer = shapeLayer
 
@@ -90,12 +84,18 @@ class BatchSegmentTrunk:
         if not imageFileNames:
             return
         for imageFilename in imageFileNames:
-            img = tiff.imread(os.path.join(self.sourceFolder, imageFilename))
+            path = os.path.join(self.sourceFolder, imageFilename)
+            img = tiff.imread(path)
             imageLayer = Image(np.array(img))
+            imageLayer.metadata['path'] = path
+            imageLayer.name = imageFilename
+            imageLayer.metadata['name'] = imageFilename
             self.segmenter = TrunkSegmenter(imageLayer)
             self.segmenter.batchMode = True
             self.segmenter.measurements = self.measurements
-            self.segmenter.run()
+            self.segmenter.setPixelSizeAndUnit()
+            self.segmenter.segmentTrunk()
+            self.segmenter.measureTrunk()
             self.measurements = self.segmenter.measurements
             csvFilename = os.path.splitext(imageFilename)[0] + ".csv"
             path = os.path.join(self.outputFolder, csvFilename)
