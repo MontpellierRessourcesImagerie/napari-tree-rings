@@ -11,9 +11,14 @@ from napari_tree_rings.image.measure import MeasureShape
 
 
 class TrunkSegmenter:
+    """The operation reads the tiff-metadata from the image file, segments the trunk using FIJI, and measures the
+    trunk on the resulting shape-layer."""
 
 
     def __init__(self, layer):
+        """Create a new trunk segmenter on the given image-layer. The image-layer must have the path information
+        in its metadata."""
+
         self.layer = layer
         self.tiffFileTags = None
         self.shapeLayer = None
@@ -24,6 +29,7 @@ class TrunkSegmenter:
 
 
     def run(self):
+        """Run the trunk segmenter on the image. Yield between operations to allow to display the progress."""
         yield
         self.setPixelSizeAndUnit()
         yield
@@ -34,6 +40,8 @@ class TrunkSegmenter:
 
 
     def setPixelSizeAndUnit(self):
+        """Read the pixel size and the unit from the tiff-file's metadata and store them in the layer."""
+
         self.tiffFileTags = TiffFileTags(self.layer.metadata['path'])
         self.tiffFileTags.getPixelSizeAndUnit()
         pixelSize = self.tiffFileTags.pixelSize
@@ -43,6 +51,10 @@ class TrunkSegmenter:
 
 
     def segmentTrunk(self):
+        """Segment the trunk in FIJI and retrieve the result as a shape-layer. Sets the parent of the shape layer
+        to the image layer and copies the parent's path into its own metadata. So that they will be available for
+        the measure trunk method."""
+
         self.segmentTrunkOp = SegmentTrunk(self.layer)
         self.segmentTrunkOp.run()
         py_image = self.segmentTrunkOp.result
@@ -63,13 +75,16 @@ class TrunkSegmenter:
 
 
     def measureTrunk(self):
+        """Measure the features on the shape layer and add them to the operations measurements."""
+
         self.measureTrunkOp = MeasureShape(self.shapeLayer, "trunk")
         self.measureTrunkOp.do()
         self.measureTrunkOp.addToTable(self.measurements)
 
 
 class BatchSegmentTrunk:
-
+    """Run the trunk segmentation on all tiff-images in a given folder and save the control shapes and the
+    measurements into an output folder."""
 
     def __init__(self, sourceFolder, outputFolder):
         self.sourceFolder = sourceFolder
@@ -79,6 +94,8 @@ class BatchSegmentTrunk:
 
 
     def run(self):
+        """Run the batch trunk segmentation."""
+
         imageFileNames = os.listdir(self.sourceFolder)
         self.segmenter = None
         if not imageFileNames:

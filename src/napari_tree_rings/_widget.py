@@ -53,7 +53,8 @@ class SegmentTrunkWidget(QWidget):
         startupWorker.start()
         app = QApplication.instance()
         app.lastWindowClosed.connect(self.onCloseApplication)
-        self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements', tabify=False)
+        self.tableDockWidget = self.viewer.window.add_dock_widget(self.table,
+                                                                  area='right', name='measurements', tabify=False)
         self.createLayout()
 
 
@@ -134,15 +135,22 @@ class SegmentTrunkWidget(QWidget):
         worker = create_worker(self.segmenter.run,
                                _progress={'total': 4, 'desc': 'Segment Trunk'})
         worker.finished.connect(self.onSegmentationFinished)
+        self.deactivateButtons()
         worker.start()
 
 
     def runBatchButtonClicked(self):
+        if not self.sourceFolder or not (os.path.exists(self.sourceFolder) and os.path.isdir(self.sourceFolder)):
+            return
+        if not self.outputFolder or not (os.path.exists(self.outputFolder) and os.path.isdir(self.outputFolder)):
+            return
         imagePaths = os.listdir(self.sourceFolder)
         self.batchSegmenter = BatchSegmentTrunk(self.sourceFolder, self.outputFolder)
         worker = create_worker(self.batchSegmenter.run,
                                _progress={'total': len(imagePaths), 'desc': 'Batch Segment Trunk'})
         worker.yielded.connect(self.onTableChanged)
+        worker.finished.connect(self.activateButtons)
+        self.deactivateButtons()
         worker.start()
 
 
@@ -155,6 +163,20 @@ class SegmentTrunkWidget(QWidget):
         self.table = TableView(self.measurements)
         self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
                                                                   tabify=False)
+        self.activateButtons()
+
+
+    def activateButtons(self):
+        self.runButton.setEnabled(True)
+        self.runBatchButton.setEnabled(True)
+        self.segmentTrunkOptionsButton.setEnabled(True)
+
+
+    def deactivateButtons(self):
+        self.runButton.setEnabled(False)
+        self.runBatchButton.setEnabled(False)
+        self.segmentTrunkOptionsButton.setEnabled(False)
+
 
     def onOptionsButtonPressed(self):
         optionsWidget = SegmentTrunkOptionsWidget(self.viewer)

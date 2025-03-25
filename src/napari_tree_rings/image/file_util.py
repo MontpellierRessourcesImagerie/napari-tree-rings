@@ -3,15 +3,20 @@ from napari.qt.threading import create_worker
 
 
 class TiffFileTags:
+    """Get the pixel size and the unit from the metadata of a tiff-file."""
 
 
     def __init__(self, path):
+        """Create an instance for the tiff-file under the given path."""
+
         self.pixelSize = 1
         self.unit = "pixel"
         self.path = path
 
 
     def getPixelSizeAndUnit(self):
+        """Get the ppixel size from the XResolution tag and the unit from the ImageDescription tag."""
+
         with TiffFile(self.path) as tif:
             tags = tif.pages[0].tags
         if not 282 in tags.keys():
@@ -31,5 +36,7 @@ class TiffFileTags:
 
 
     def getPixelSizeAndUnitWorker(self):
+        """Answer a worker, that can be used to run the command in a parallel thread."""
+
         worker = create_worker(self.getPixelSizeAndUnit)
         return worker
