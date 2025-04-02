@@ -1,0 +1,8 @@
+{
+  "pith": {
+    "pith_attention_unet_v0.1": "https://github.com/MontpellierRessourcesImagerie/tree-ring-analyzer/releases/download/v0.1/pith.keras"
+  },
+  "rings": {
+    "rings_attention_unet_v0.1": "https://github.com/MontpellierRessourcesImagerie/tree-ring-analyzer/releases/download/v0.1/bigDistance.keras"
+  }
+}

@@ -18,6 +18,7 @@ from napari.layers import Image
 from napari_tree_rings.progress import IndeterminedProgressThread
 from napari_tree_rings.qtutil import WidgetTool, TableView
 from napari_tree_rings.image.process import TrunkSegmenter
+from napari_tree_rings.image.process import RingsSegmenter
 from napari_tree_rings.image.process import BatchSegmentTrunk
 from napari_tree_rings.image.fiji import FIJI
 from napari_tree_rings.image.fiji import SegmentTrunk
@@ -27,8 +28,9 @@ if TYPE_CHECKING:
     import napari
 
 
-
+# noinspection PyTypeChecker
 class SegmentTrunkWidget(QWidget):
+
 
 
     def __init__(self, viewer: "napari.viewer.Viewer"):
@@ -42,10 +44,13 @@ class SegmentTrunkWidget(QWidget):
         self.measurements = {}
         self.table = TableView(self.measurements)
         self.segmentTrunkOptionsButton = None
+        self.segmentRingsOptionsButton = None
+        self.runSegmentRingsButton = None
         self.sourceFolderInput = None
         self.outputFolderInput = None
         self.sourceFolder = str(Path.home())
         self.outputFolder = str(Path.home())
+        self.createLayout()
         startupWorker = FIJI.getStartUpThread()
         startupWorker.returned.connect(self.onStartUpFinished)
         self.startUpProgress = IndeterminedProgressThread("Initializing FIJI...")
@@ -55,31 +60,86 @@ class SegmentTrunkWidget(QWidget):
         app.lastWindowClosed.connect(self.onCloseApplication)
         self.tableDockWidget = self.viewer.window.add_dock_widget(self.table,
                                                                   area='right', name='measurements', tabify=False)
-        self.createLayout()
 
 
     def createLayout(self):
-        self.runButton = QPushButton("&Run")
+        segmentLayout = self.createSegmentTrunkLayout()
+        segmentRingsLayout = self.createSegmentRingsLayout()
+        batchLayout = self.createBatchProcessingLayout()
+        mainLayout = QVBoxLayout()
+        mainLayout.addLayout(segmentLayout)
+        mainLayout.addLayout(segmentRingsLayout)
+        mainLayout.addLayout(batchLayout)
+        self.setLayout(mainLayout)
+
+
+    def createSegmentTrunkLayout(self):
+        segmentVLayout = QVBoxLayout()
+        segmentLayout = QHBoxLayout()
+        self.runButton = QPushButton("Run")
         self.runButton.clicked.connect(self.onRunButtonPressed)
         self.runButton.setEnabled(False)
-        segmentLayout = QHBoxLayout()
-        resourcesPATH = os.path.join(Path(__file__).parent.resolve(), "resources", "gear.png")
-        gearIcon = QIcon(resourcesPATH)
-        self.segmentTrunkOptionsButton = QPushButton()
-        self.segmentTrunkOptionsButton.setIcon(gearIcon)
-        self.segmentTrunkOptionsButton.clicked.connect(self.onOptionsButtonPressed)
+        self.segmentTrunkOptionsButton = self.getOptionsButton(self.onOptionsButtonPressed)
         segmentLayout.addWidget(self.runButton)
         segmentLayout.addWidget(self.segmentTrunkOptionsButton)
-        sourceFileLayout = QHBoxLayout()
-        sourceFolderLabel, self.sourceFolderInput = WidgetTool.getLineInput(self, "Source: ",
-                                                              self.sourceFolder,
-                                                              self.fieldWidth,
-                                                              self.sourceFolderChanged)
-        sourceFolderBrowseButton = QPushButton("Browse")
-        sourceFolderBrowseButton.clicked.connect(self.browseSourceFolderClicked)
-        sourceFileLayout.addWidget(sourceFolderLabel)
-        sourceFileLayout.addWidget(self.sourceFolderInput)
-        sourceFileLayout.addWidget(sourceFolderBrowseButton)
+        segmentTrunkGroupBox = QGroupBox("Segment Trunk")
+        segmentTrunkGroupBox.setLayout(segmentLayout)
+        segmentLayout.setContentsMargins(*self.getGroupBoxMargins())
+        segmentVLayout.addWidget(segmentTrunkGroupBox)
+        return segmentVLayout
+
+
+    def createSegmentRingsLayout(self):
+        segmentVLayout = QVBoxLayout()
+        segmentLayout = QHBoxLayout()
+        self.runSegmentRingsButton = QPushButton("Run")
+        self.runSegmentRingsButton.clicked.connect(self.onRunSegmentRingsButtonPressed)
+        self.runSegmentRingsButton.setEnabled(False)
+        self.segmentRingsOptionsButton = self.getOptionsButton(self.onSegmentRingsOptionsButtonPressed)
+        segmentLayout.addWidget(self.runSegmentRingsButton)
+        segmentRingsGroupBox = QGroupBox("Segment Rings")
+        segmentRingsGroupBox.setLayout(segmentLayout)
+        segmentLayout.setContentsMargins(*self.getGroupBoxMargins())
+        segmentVLayout.addWidget(segmentRingsGroupBox)
+        return segmentVLayout
+
+
+    def createBatchProcessingLayout(self):
+        sourceFileLayout = self.createSourceFileLayout()
+        outputFileLayout = self.createOutputFileLayout()
+        runBatchLayout = QHBoxLayout()
+        self.runBatchButton = QPushButton("Run &Batch")
+        self.runBatchButton.clicked.connect(self.runBatchButtonClicked)
+        self.runBatchButton.setEnabled(False)
+        runBatchLayout.addWidget(self.runBatchButton)
+        batchLayout = QVBoxLayout()
+        batchGroupBox = QGroupBox("Batch Segment Trunk")
+        groupBoxLayout = QVBoxLayout()
+        groupBoxLayout.setContentsMargins(*self.getGroupBoxMargins())
+        batchGroupBox.setLayout(groupBoxLayout)
+        groupBoxLayout.addLayout(sourceFileLayout)
+        groupBoxLayout.addLayout(outputFileLayout)
+        groupBoxLayout.addLayout(runBatchLayout)
+        batchLayout.addWidget(batchGroupBox)
+        return batchLayout
+
+
+    @classmethod
+    def getOptionsButton(cls, callback):
+        resourcesPATH = os.path.join(Path(__file__).parent.resolve(), "resources", "gear.png")
+        gearIcon = QIcon(resourcesPATH)
+        optionsButton = QPushButton()
+        optionsButton.setIcon(gearIcon)
+        optionsButton.clicked.connect(callback)
+        return optionsButton
+
+
+    @classmethod
+    def getGroupBoxMargins(cls):
+        return 10, 20, 10, 20
+
+
+    def createOutputFileLayout(self):
         outputFileLayout = QHBoxLayout()
         outputFolderLabel, self.outputFolderInput = WidgetTool.getLineInput(self, "Output: ",
                                                                             self.outputFolder,
@@ -90,23 +150,21 @@ class SegmentTrunkWidget(QWidget):
         outputFileLayout.addWidget(outputFolderLabel)
         outputFileLayout.addWidget(self.outputFolderInput)
         outputFileLayout.addWidget(outputFolderBrowseButton)
-        runBatchLayout = QHBoxLayout()
-        self.runBatchButton = QPushButton("Run &Batch")
-        self.runBatchButton.clicked.connect(self.runBatchButtonClicked)
-        self.runBatchButton.setEnabled(False)
-        runBatchLayout.addWidget(self.runBatchButton)
-        batchLayout = QVBoxLayout()
-        batchGroupBox = QGroupBox("Batch Segment Trunk")
-        groupBoxLayout = QVBoxLayout()
-        batchGroupBox.setLayout(groupBoxLayout)
-        groupBoxLayout.addLayout(sourceFileLayout)
-        groupBoxLayout.addLayout(outputFileLayout)
-        groupBoxLayout.addLayout(runBatchLayout)
-        batchLayout.addWidget(batchGroupBox)
-        mainLayout = QVBoxLayout()
-        mainLayout.addLayout(segmentLayout)
-        mainLayout.addLayout(batchLayout)
-        self.setLayout(mainLayout)
+        return outputFileLayout
+
+
+    def createSourceFileLayout(self):
+        sourceFileLayout = QHBoxLayout()
+        sourceFolderLabel, self.sourceFolderInput = WidgetTool.getLineInput(self, "Source: ",
+                                                                            self.sourceFolder,
+                                                                            self.fieldWidth,
+                                                                            self.sourceFolderChanged)
+        sourceFolderBrowseButton = QPushButton("Browse")
+        sourceFolderBrowseButton.clicked.connect(self.browseSourceFolderClicked)
+        sourceFileLayout.addWidget(sourceFolderLabel)
+        sourceFileLayout.addWidget(self.sourceFolderInput)
+        sourceFileLayout.addWidget(sourceFolderBrowseButton)
+        return sourceFileLayout
 
 
     def getActiveLayer(self):
@@ -122,6 +180,7 @@ class SegmentTrunkWidget(QWidget):
     def onStartUpFinished(self):
         self.startUpProgress.stop()
         self.runButton.setEnabled(True)
+        self.runSegmentRingsButton.setEnabled(True)
         self.runBatchButton.setEnabled(True)
 
 
@@ -137,6 +196,14 @@ class SegmentTrunkWidget(QWidget):
         worker.finished.connect(self.onSegmentationFinished)
         self.deactivateButtons()
         worker.start()
+
+
+    def onRunSegmentRingsButtonPressed(self):
+        print("Starting ring segmentation....")
+        layer = self.getActiveLayer()
+        if not layer or not type(layer) is Image:
+            return
+        layer.metadata['path'] = layer.source.path
 
 
     def runBatchButtonClicked(self):
@@ -168,12 +235,14 @@ class SegmentTrunkWidget(QWidget):
 
     def activateButtons(self):
         self.runButton.setEnabled(True)
+        self.runSegmentRingsButton(True)
         self.runBatchButton.setEnabled(True)
         self.segmentTrunkOptionsButton.setEnabled(True)
 
 
     def deactivateButtons(self):
         self.runButton.setEnabled(False)
+        self.runSegmentRingsButton(False)
         self.runBatchButton.setEnabled(False)
         self.segmentTrunkOptionsButton.setEnabled(False)
 
@@ -181,6 +250,11 @@ class SegmentTrunkWidget(QWidget):
     def onOptionsButtonPressed(self):
         optionsWidget = SegmentTrunkOptionsWidget(self.viewer)
         self.viewer.window.add_dock_widget(optionsWidget, area='right', name='Options of Segment Trunk ')
+
+
+    def onSegmentRingsOptionsButtonPressed(self):
+        optionsWidget = SegmentRingsOptionsWidget(self.viewer)
+        self.viewer.window.add_dock_widget(optionsWidget, area='right', name='Options of Segment Rings ')
 
 
     def addTrunkSegmentationToViewer(self, v):
@@ -376,3 +450,18 @@ class SegmentTrunkOptionsWidget(QWidget):
         self.viewer.window.remove_dock_widget(self)
         self.close()
 
+
+
+class SegmentRingsOptionsWidget(QWidget):
+
+
+    def __init__(self, viewer):
+        super().__init__()
+        self.viewer = viewer
+        self.segmentRings = RingsSegmenter(None, None, None)
+        self.options = self.segmentRings.options
+        self.createLayout()
+
+
+    def createLayout(self):
+        pass
