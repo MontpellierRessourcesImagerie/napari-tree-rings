@@ -41,6 +41,7 @@ class SegmentTrunkWidget(QWidget):
         self.runBatchButton = None
         self.segmenter = None
         self.batchSegmenter = None
+        self.ringsSegmenter = None
         self.measurements = {}
         self.table = TableView(self.measurements)
         self.segmentTrunkOptionsButton = None
@@ -97,6 +98,7 @@ class SegmentTrunkWidget(QWidget):
         self.runSegmentRingsButton.setEnabled(False)
         self.segmentRingsOptionsButton = self.getOptionsButton(self.onSegmentRingsOptionsButtonPressed)
         segmentLayout.addWidget(self.runSegmentRingsButton)
+        segmentLayout.addWidget(self.segmentRingsOptionsButton)
         segmentRingsGroupBox = QGroupBox("Segment Rings")
         segmentRingsGroupBox.setLayout(segmentLayout)
         segmentLayout.setContentsMargins(*self.getGroupBoxMargins())
@@ -204,6 +206,12 @@ class SegmentTrunkWidget(QWidget):
         if not layer or not type(layer) is Image:
             return
         layer.metadata['path'] = layer.source.path
+        self.ringsSegmenter = RingsSegmenter(layer)
+        worker = create_worker(self.ringsSegmenter.run,
+                               _progress={'total': 4, 'desc': 'Segment Rings & Pith'})
+        worker.finished.connect(self.onRingsSegmentationFinished)
+        self.deactivateButtons()
+        worker.start()
 
 
     def runBatchButtonClicked(self):
@@ -233,16 +241,23 @@ class SegmentTrunkWidget(QWidget):
         self.activateButtons()
 
 
+    @Slot()
+    def onRingsSegmentationFinished(self):
+        self.viewer.scale_bar.unit = self.ringsSegmenter.tiffFileTags.unit
+        self.viewer.add_layer(self.ringsSegmenter.resultsLayer)
+        self.activateButtons()
+
+
     def activateButtons(self):
         self.runButton.setEnabled(True)
-        self.runSegmentRingsButton(True)
+        self.runSegmentRingsButton.setEnabled(True)
         self.runBatchButton.setEnabled(True)
         self.segmentTrunkOptionsButton.setEnabled(True)
 
 
     def deactivateButtons(self):
         self.runButton.setEnabled(False)
-        self.runSegmentRingsButton(False)
+        self.runSegmentRingsButton.setEnabled(False)
         self.runBatchButton.setEnabled(False)
         self.segmentTrunkOptionsButton.setEnabled(False)
 
@@ -458,10 +473,25 @@ class SegmentRingsOptionsWidget(QWidget):
     def __init__(self, viewer):
         super().__init__()
         self.viewer = viewer
-        self.segmentRings = RingsSegmenter(None, None, None)
+        self.segmentRings = RingsSegmenter(None)
         self.options = self.segmentRings.options
+        self.ringsModelCombo = None
+        self.pithModelCombo = None
         self.createLayout()
 
 
     def createLayout(self):
-        pass
+        ringsModelLabel, self.ringsModelCombo = WidgetTool.getComboInput(self,
+                                                                        "Ring model: ",
+                                                                        self.segmentRings.ringsModels)
+        pithModelLabel, self.pithModelCombo = WidgetTool.getComboInput(self,
+                                                                         "Pith model: ",
+                                                                         self.segmentRings.pithModels)
+        self.ringsModelCombo.setCurrentText(self.segmentRings.options['ringsModel'])
+        mainLayout = QVBoxLayout()
+        formLayout = QFormLayout(parent=self)
+        formLayout.setLabelAlignment(Qt.AlignRight)
+        mainLayout.addLayout(formLayout)
+        formLayout.addRow(ringsModelLabel, self.ringsModelCombo)
+        formLayout.addRow(pithModelLabel, self.pithModelCombo)
+        self.setLayout(mainLayout)

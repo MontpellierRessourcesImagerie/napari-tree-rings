@@ -1,4 +1,5 @@
 import os
+import cv2
 import appdirs
 import json
 import tifffile as tiff
@@ -8,10 +9,13 @@ from pathlib import Path
 from pandas import DataFrame
 from typing import Iterable
 from urllib.request import urlretrieve
-from napari.layers import Image, Layer
+from skimage import measure
+from scipy import ndimage
+from napari.layers import Image, Layer, Labels, Shapes
 from napari_tree_rings.image.fiji import SegmentTrunk
 from napari_tree_rings.image.file_util import TiffFileTags
 from napari_tree_rings.image.measure import MeasureShape
+from tree_ring_analyzer.segmentation import TreeRingSegmentation
 
 
 class Segmenter(object):
@@ -127,11 +131,50 @@ class RingsSegmenter(Segmenter):
         self.loadRingsModels()
         self.options = {'pithModel': self.pithModels[0], 'ringsModel': self.ringsModels[0]}
         self.loadOptions()
+        self.resultsLayer = None
 
 
     def segment(self):
+        import tensorflow as tf
+        self.loadOptions()
         image = self.layer.data
-        print(image.shape)
+        ringsModel = tf.keras.models.load_model(os.path.join(self.ringsModelsPath, self.options['ringsModel']))
+        pithModel = tf.keras.models.load_model(os.path.join(self.pithModelsPath, self.options['pithModel']))
+        segmentation = TreeRingSegmentation(ringsModel, pithModel)
+        segmentation.segmentImage(image)
+        rings = self.maskToPolygons(segmentation.maskRings)
+        pith = self.maskToPolygons(segmentation.pith)
+        self.resultsLayer = Shapes(rings + pith,
+                                   edge_width=8,
+                                   face_color='white',
+                                   edge_color='red',
+                                   scale=self.layer.scale,
+                                   units=self.layer.units,
+                                   blending='minimum',
+                                   shape_type='polygon')
+        self.resultsLayer.metadata['parent'] = self.layer
+        self.resultsLayer.metadata['parent_path'] = self.layer.metadata['path']
+        self.resultsLayer.name = 'pith and rings of ' + self.layer.name
+
+
+    @classmethod
+    def maskToPolygons(cls, data):
+        labels = measure.label(data)
+        rings = []
+        maxLabel = np.max(labels)
+        for ring in range(1, maxLabel + 1):
+            mask = np.ndarray.copy(labels)
+            mask[mask < ring] = 0
+            mask[mask > ring] = 0
+            mask = (mask // ring) * 255
+            mask = mask.astype(np.uint8)
+            mask = ndimage.binary_fill_holes(mask)
+            mask = mask.astype(np.uint8)
+            contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            polys = [np.squeeze(e) for e in contours[0]]
+            changed = [np.array([y, x]) for x, y in polys]
+            rings.append(changed)
+        return rings
 
 
     def measure(self):
