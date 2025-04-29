@@ -4,6 +4,26 @@ from skimage.measure import regionprops_table
 from napari.qt.threading import create_worker
 
 
+
+class TableTool:
+
+
+    @classmethod
+    def addTableAToB(cls, tableA, tableB):
+        if len(tableB.keys()) == 0:
+            for key, value in tableA.items():
+                    tableB[key] = value
+            return
+        for key, value in tableA.items():
+            if key in tableB.keys():
+                tableB[key] = np.append(tableB[key], [value])
+        for key, value in tableA.items():
+            if not key in tableB.keys():
+                column = np.array([float('nan')] * len(list(tableA.keys())[0]))
+                tableB[key] = np.append(column, [value])
+
+
+
 class Measure(object):
     """Base-class for classes that measure layers."""
 
@@ -41,17 +61,7 @@ class Measure(object):
         """Add the measurements to the table. Table is a dictionary in which the keys are the column names
         and the values (each in form of a list) are the columns"""
 
-        if len(table.keys()) == 0:
-            for key, value in self.table.items():
-                    table[key] = value
-            return
-        for key, value in self.table.items():
-            if key in table.keys():
-                table[key] = np.append(table[key], [value])
-        for key, value in self.table.items():
-            if not key in table.keys():
-                column = np.array([float('nan')] * len(list(self.table.keys())[0]))
-                table[key] = np.append(column, [value])
+        TableTool.addTableAToB(self.table, table)
 
 
     def getRunThread(self):

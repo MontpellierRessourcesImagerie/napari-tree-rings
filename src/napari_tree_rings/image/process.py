@@ -1,3 +1,4 @@
+import math
 import os
 import cv2
 import appdirs
@@ -14,7 +15,7 @@ from scipy import ndimage
 from napari.layers import Image, Layer, Labels, Shapes
 from napari_tree_rings.image.fiji import SegmentTrunk
 from napari_tree_rings.image.file_util import TiffFileTags
-from napari_tree_rings.image.measure import MeasureShape
+from napari_tree_rings.image.measure import MeasureShape, TableTool
 from tree_ring_analyzer.segmentation import TreeRingSegmentation
 
 
@@ -27,7 +28,7 @@ class Segmenter(object):
         self.layer = layer
         self.tiffFileTags = None
         self.segmentTrunkOp = None
-        self.measureTrunkOp = None
+        self.measureOp = None
         self.measurements = {}
 
 
@@ -105,9 +106,9 @@ class TrunkSegmenter(Segmenter):
     def measure(self):
         """Measure the features on the shape layer and add them to the operations measurements."""
 
-        self.measureTrunkOp = MeasureShape(self.shapeLayer, "trunk")
-        self.measureTrunkOp.do()
-        self.measureTrunkOp.addToTable(self.measurements)
+        self.measureOp = MeasureShape(self.shapeLayer, object_type="trunk")
+        self.measureOp.do()
+        self.measureOp.addToTable(self.measurements)
 
 
 
@@ -132,6 +133,7 @@ class RingsSegmenter(Segmenter):
         self.options = {'pithModel': self.pithModels[0], 'ringsModel': self.ringsModels[0]}
         self.loadOptions()
         self.resultsLayer = None
+        self.minRadiusDeltaPithInnerRing = 3
 
 
     def segment(self):
@@ -144,6 +146,7 @@ class RingsSegmenter(Segmenter):
         segmentation.segmentImage(image)
         rings = self.maskToPolygons(segmentation.maskRings)
         pith = self.maskToPolygons(segmentation.pith)
+        self.removeInnerRing(rings, pith)
         self.resultsLayer = Shapes(rings + pith,
                                    edge_width=8,
                                    face_color='white',
@@ -155,6 +158,19 @@ class RingsSegmenter(Segmenter):
         self.resultsLayer.metadata['parent'] = self.layer
         self.resultsLayer.metadata['parent_path'] = self.layer.metadata['path']
         self.resultsLayer.name = 'pith and rings of ' + self.layer.name
+
+
+    def removeInnerRing(self, ringPolygons, pithPolygons):
+        innerRingShapeList = Shapes([ringPolygons[-1]], shape_type='polygon')
+        pithShapeList = Shapes(pithPolygons, shape_type='polygon')
+        innerRingLabels = innerRingShapeList.to_masks(mask_shape=self.layer.data.shape[0:2])[0] * 1
+        pithLabels = pithShapeList.to_masks(mask_shape=self.layer.data.shape[0:2])[0] * 1
+        areaRing = len(innerRingLabels[innerRingLabels>0])
+        areaPith = len(pithLabels[pithLabels>0])
+        radiusRing = math.sqrt(areaRing) / math.pi
+        radiusPith = math.sqrt(areaPith) / math.pi
+        if radiusRing - radiusPith < self.minRadiusDeltaPithInnerRing:
+            ringPolygons.pop()
 
 
     @classmethod
@@ -178,7 +194,22 @@ class RingsSegmenter(Segmenter):
 
 
     def measure(self):
-        pass
+        """Measure the features on the shape layer and add them to the operations measurements."""
+        for label, shape in enumerate(reversed(self.resultsLayer.data)):
+            shapeLayer = Shapes([shape],
+                                   scale=self.layer.scale,
+                                   units=self.layer.units,
+                                   shape_type='polygon' )
+            shapeLayer.metadata['parent'] = self.layer
+            shapeLayer.metadata['parent_path'] = self.layer.metadata['path']
+            shapeLayer.name = 'pith and rings of ' + self.layer.name
+            objectType = "ring"
+            if label == 0:
+                objectType = "pith"
+            self.measureOp = MeasureShape(shapeLayer, object_type=objectType)
+            self.measureOp.do()
+            self.measureOp.addToTable(self.measurements)
+            self.measurements['label'][-1] = label
 
 
     def pithModelsExist(self):
@@ -274,6 +305,7 @@ class BatchSegmentTrunk:
         self.outputFolder = outputFolder
         self.measurements =  {}
         self.segmenter = None
+        self.ringSegmenter = None
 
 
     def run(self):
@@ -290,15 +322,26 @@ class BatchSegmentTrunk:
             imageLayer.metadata['path'] = path
             imageLayer.name = imageFilename
             imageLayer.metadata['name'] = imageFilename
+
             self.segmenter = TrunkSegmenter(imageLayer)
             self.segmenter.measurements = self.measurements
             self.segmenter.setPixelSizeAndUnit()
             self.segmenter.segment()
             self.segmenter.measure()
-            self.measurements = self.segmenter.measurements
+
+            self.ringSegmenter = RingsSegmenter(imageLayer)
+            self.ringSegmenter.measurements = self.measurements
+            self.ringSegmenter.segment()
+            self.ringSegmenter.measure()
+
+            self.measurements = self.ringSegmenter.measurements
+            # TableTool.addTableAToB(self.ringSegmenter.measurements, self.measurements)
             csvFilename = os.path.splitext(imageFilename)[0] + ".csv"
+            csvRingsFilename = os.path.splitext(imageFilename)[0] + "_rings.csv"
             path = os.path.join(self.outputFolder, csvFilename)
+            ringsPath = os.path.join(self.outputFolder, csvRingsFilename)
             self.segmenter.shapeLayer.save(path)
+            self.ringSegmenter.resultsLayer.save(ringsPath)
             yield self.measurements
         time = str(datetime.datetime.now())
         tablePath = os.path.join(self.outputFolder, time + "_trunk-measurements.csv")

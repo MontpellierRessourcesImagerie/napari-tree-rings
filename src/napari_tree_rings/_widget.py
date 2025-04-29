@@ -16,6 +16,7 @@ from qtpy.QtWidgets import QApplication
 from scyjava import jimport
 from napari.layers import Image
 from napari_tree_rings.progress import IndeterminedProgressThread
+from napari_tree_rings.image.measure import TableTool
 from napari_tree_rings.qtutil import WidgetTool, TableView
 from napari_tree_rings.image.process import TrunkSegmenter
 from napari_tree_rings.image.process import RingsSegmenter
@@ -207,6 +208,7 @@ class SegmentTrunkWidget(QWidget):
             return
         layer.metadata['path'] = layer.source.path
         self.ringsSegmenter = RingsSegmenter(layer)
+        self.ringsSegmenter.measurements = self.measurements
         worker = create_worker(self.ringsSegmenter.run,
                                _progress={'total': 4, 'desc': 'Segment Rings & Pith'})
         worker.finished.connect(self.onRingsSegmentationFinished)
@@ -245,6 +247,11 @@ class SegmentTrunkWidget(QWidget):
     def onRingsSegmentationFinished(self):
         self.viewer.scale_bar.unit = self.ringsSegmenter.tiffFileTags.unit
         self.viewer.add_layer(self.ringsSegmenter.resultsLayer)
+        self.tableDockWidget.close()
+        self.measurements = self.ringsSegmenter.measurements
+        self.table = TableView(self.measurements)
+        self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
+                                                                  tabify=False)
         self.activateButtons()
 
 
