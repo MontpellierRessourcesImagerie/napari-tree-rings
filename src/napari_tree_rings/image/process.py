@@ -121,6 +121,7 @@ class RingsSegmenter(Segmenter):
     def __init__(self, layer):
         super().__init__(layer)
         self.dataFolder = appdirs.user_data_dir("napari-tree-rings")
+        self.optionsPath = os.path.join(self.dataFolder, "options.json")
         self.modelsPath = os.path.join(self.dataFolder, "models")
         self.pithModelsPath = os.path.join(self.modelsPath, "pith")
         self.ringsModelsPath = os.path.join(self.modelsPath, "rings")
@@ -130,7 +131,8 @@ class RingsSegmenter(Segmenter):
         self.ringsModels = []
         self.loadPithModels()
         self.loadRingsModels()
-        self.options = {'pithModel': self.pithModels[0], 'ringsModel': self.ringsModels[0]}
+        self.options = {'pithModel': self.pithModels[0], 'ringsModel': self.ringsModels[0], 'patchSize': 256,
+                        'overlap': 60, 'batchSize': 8, 'thickness': 1}
         self.loadOptions()
         self.resultsLayer = None
         self.minRadiusDeltaPithInnerRing = 3
@@ -143,6 +145,10 @@ class RingsSegmenter(Segmenter):
         ringsModel = tf.keras.models.load_model(os.path.join(self.ringsModelsPath, self.options['ringsModel']))
         pithModel = tf.keras.models.load_model(os.path.join(self.pithModelsPath, self.options['pithModel']))
         segmentation = TreeRingSegmentation(ringsModel, pithModel)
+        segmentation.patchSize = self.options['patchSize']
+        segmentation.overlap = self.options['overlap']
+        segmentation.batchSize = self.options['batchSize']
+        segmentation.thickness = self.options['thickness']
         segmentation.segmentImage(image)
         rings = self.maskToPolygons(segmentation.maskRings)
         pith = self.maskToPolygons(segmentation.pith)
@@ -289,11 +295,15 @@ class RingsSegmenter(Segmenter):
 
 
     def loadOptions(self):
-        pass
+        if not os.path.exists(self.optionsPath):
+            self.saveOptions()
+        with open(self.optionsPath) as f:
+            self.options = json.load(f)
 
 
     def saveOptions(self):
-        pass
+        with open(self.optionsPath, 'w') as f:
+            json.dump(self.options, f)
 
 
 class BatchSegmentTrunk:

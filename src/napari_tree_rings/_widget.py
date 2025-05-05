@@ -484,6 +484,11 @@ class SegmentRingsOptionsWidget(QWidget):
         self.options = self.segmentRings.options
         self.ringsModelCombo = None
         self.pithModelCombo = None
+        self.patchSizeInput = None
+        self.overlapInput = None
+        self.batchSizeInput = None
+        self.thicknessInput = None
+        self.fieldWidth = 200
         self.createLayout()
 
 
@@ -495,10 +500,76 @@ class SegmentRingsOptionsWidget(QWidget):
                                                                          "Pith model: ",
                                                                          self.segmentRings.pithModels)
         self.ringsModelCombo.setCurrentText(self.segmentRings.options['ringsModel'])
+        patchSizeLabel, self.patchSizeInput = WidgetTool.getLineInput(self, "Patch size: ",
+                                                              self.options['patchSize'],
+                                                              self.fieldWidth,
+                                                              self.patchSizeChanged)
+        overlapLabel, self.overlapInput = WidgetTool.getLineInput(self, "Overlap: ",
+                                                                      self.options['overlap'],
+                                                                      self.fieldWidth,
+                                                                      self.overlapChanged)
+        batchSizeLabel, self.batchSizeInput = WidgetTool.getLineInput(self, "Batch size: ",
+                                                                      self.options['batchSize'],
+                                                                      self.fieldWidth,
+                                                                      self.batchSizeChanged)
+        thicknessLabel, self.thicknessInput = WidgetTool.getLineInput(self, "Thickness ",
+                                                                      self.options['thickness'],
+                                                                      self.fieldWidth,
+                                                                      self.thicknessChanged)
         mainLayout = QVBoxLayout()
         formLayout = QFormLayout(parent=self)
         formLayout.setLabelAlignment(Qt.AlignRight)
         mainLayout.addLayout(formLayout)
         formLayout.addRow(ringsModelLabel, self.ringsModelCombo)
         formLayout.addRow(pithModelLabel, self.pithModelCombo)
+        formLayout.addRow(patchSizeLabel, self.patchSizeInput)
+        formLayout.addRow(overlapLabel, self.overlapInput)
+        formLayout.addRow(batchSizeLabel, self.batchSizeInput)
+        formLayout.addRow(thicknessLabel, self.thicknessInput)
+        saveButton = QPushButton("&Save")
+        saveButton.clicked.connect(self.saveOptionsButtonPressed)
+        saveAndCloseButton = QPushButton("Save && Close")
+        saveAndCloseButton.clicked.connect(self.saveAndCloseButtonPressed)
+        cancelAndCloseButton = QPushButton("&Cancel && Close")
+        cancelAndCloseButton.clicked.connect(self.cancelAndCloseButtonPressed)
+        buttonsLayout = QHBoxLayout()
+        buttonsLayout.addWidget(saveButton)
+        buttonsLayout.addWidget(saveAndCloseButton)
+        buttonsLayout.addWidget(cancelAndCloseButton)
+        mainLayout.addLayout(buttonsLayout)
         self.setLayout(mainLayout)
+
+
+
+    def patchSizeChanged(self):
+        pass
+
+
+    def overlapChanged(self):
+        pass
+
+
+    def batchSizeChanged(self):
+        pass
+
+
+    def thicknessChanged(self):
+        pass
+
+
+    def saveOptionsButtonPressed(self):
+        print("Saving options...")
+        self.setOptionsFromDialog()
+        self.segmentRings.saveOptions()
+
+
+    def saveAndCloseButtonPressed(self):
+        print("Saving options...")
+        self.setOptionsFromDialog()
+        self.segmentRings.saveOptions()
+        self.viewer.window.remove_dock_widget(self)
+        self.close()
+
+
+    def setOptionsFromDialog(self):
+        pass
