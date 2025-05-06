@@ -516,16 +516,6 @@ class SegmentRingsOptionsWidget(QWidget):
                                                                       self.options['thickness'],
                                                                       self.fieldWidth,
                                                                       self.thicknessChanged)
-        mainLayout = QVBoxLayout()
-        formLayout = QFormLayout(parent=self)
-        formLayout.setLabelAlignment(Qt.AlignRight)
-        mainLayout.addLayout(formLayout)
-        formLayout.addRow(ringsModelLabel, self.ringsModelCombo)
-        formLayout.addRow(pithModelLabel, self.pithModelCombo)
-        formLayout.addRow(patchSizeLabel, self.patchSizeInput)
-        formLayout.addRow(overlapLabel, self.overlapInput)
-        formLayout.addRow(batchSizeLabel, self.batchSizeInput)
-        formLayout.addRow(thicknessLabel, self.thicknessInput)
         saveButton = QPushButton("&Save")
         saveButton.clicked.connect(self.saveOptionsButtonPressed)
         saveAndCloseButton = QPushButton("Save && Close")
@@ -536,6 +526,16 @@ class SegmentRingsOptionsWidget(QWidget):
         buttonsLayout.addWidget(saveButton)
         buttonsLayout.addWidget(saveAndCloseButton)
         buttonsLayout.addWidget(cancelAndCloseButton)
+        mainLayout = QVBoxLayout()
+        formLayout = QFormLayout()
+        formLayout.setLabelAlignment(Qt.AlignRight)
+        formLayout.addRow(ringsModelLabel, self.ringsModelCombo)
+        formLayout.addRow(pithModelLabel, self.pithModelCombo)
+        formLayout.addRow(patchSizeLabel, self.patchSizeInput)
+        formLayout.addRow(overlapLabel, self.overlapInput)
+        formLayout.addRow(batchSizeLabel, self.batchSizeInput)
+        formLayout.addRow(thicknessLabel, self.thicknessInput)
+        mainLayout.addLayout(formLayout)
         mainLayout.addLayout(buttonsLayout)
         self.setLayout(mainLayout)
 
@@ -571,5 +571,15 @@ class SegmentRingsOptionsWidget(QWidget):
         self.close()
 
 
+    def cancelAndCloseButtonPressed(self):
+        self.segmentRings.loadOptions()
+        self.viewer.window.remove_dock_widget(self)
+        self.close()
+
+
+
     def setOptionsFromDialog(self):
-        pass
+        self.segmentRings.options["patchSize"] = int(self.patchSizeInput.text().strip())
+        self.segmentRings.options["overlap"] = int(self.overlapInput.text().strip())
+        self.segmentRings.options["batchSize"] = int(self.batchSizeInput.text().strip())
+        self.segmentRings.options["thickness"] = int(self.thicknessInput.text().strip())
