@@ -22,7 +22,7 @@ from napari_tree_rings.image.process import TrunkSegmenter
 from napari_tree_rings.image.process import RingsSegmenter
 from napari_tree_rings.image.process import BatchSegmentTrunk
 from napari_tree_rings.image.fiji import FIJI
-from napari_tree_rings.image.fiji import SegmentTrunk
+from napari_tree_rings.image.segmentation import SegmentTrunk
 
 
 if TYPE_CHECKING:
@@ -53,15 +53,9 @@ class SegmentTrunkWidget(QWidget):
         self.sourceFolder = str(Path.home())
         self.outputFolder = str(Path.home())
         self.createLayout()
-        startupWorker = FIJI.getStartUpThread()
-        startupWorker.returned.connect(self.onStartUpFinished)
-        self.startUpProgress = IndeterminedProgressThread("Initializing FIJI...")
-        self.startUpProgress.start()
-        startupWorker.start()
-        app = QApplication.instance()
-        app.lastWindowClosed.connect(self.onCloseApplication)
         self.tableDockWidget = self.viewer.window.add_dock_widget(self.table,
                                                                   area='right', name='measurements', tabify=False)
+        self.onStartUpFinished()
 
 
     def createLayout(self):
@@ -181,7 +175,6 @@ class SegmentTrunkWidget(QWidget):
 
 
     def onStartUpFinished(self):
-        self.startUpProgress.stop()
         self.runButton.setEnabled(True)
         self.runSegmentRingsButton.setEnabled(True)
         self.runBatchButton.setEnabled(True)
@@ -287,12 +280,6 @@ class SegmentTrunkWidget(QWidget):
         v.refresh()
 
 
-    def onCloseApplication(self):
-        print("closing fiji...")
-        System = jimport("java.lang.System")
-        System.exit(0)
-
-
     def sourceFolderChanged(self):
         pass
 
@@ -337,16 +324,9 @@ class SegmentTrunkOptionsWidget(QWidget):
         self.segmentTrunk = SegmentTrunk(None)
         self.options = self.segmentTrunk.options
         self.scaleFactorInput = None
-        self.sigmaInput = None
-        self.thresholdingChoice = None
         self.openingInput = None
-        self.closingInput = None
         self.strokeWidthInput = None
-        self.interpolationInput = None
-        self.vectorsInput = None
-        self.barkVectorsInput = None
         self.fieldWidth = 200
-        self.thresholdingMethods = FIJI.getAutoThresholdingMethods()
         self.createLayout()
 
 
@@ -355,38 +335,14 @@ class SegmentTrunkOptionsWidget(QWidget):
                                                                           self.options['scale'],
                                                                           self.fieldWidth,
                                                                           self.scaleFactorChanged)
-        sigmaLabel, self.sigmaInput = WidgetTool.getLineInput(self, "Sigma: ",
-                                                                          self.options['sigma'],
-                                                                          self.fieldWidth,
-                                                                          self.sigmaChanged)
-        thresholdingMethodLabel, self.thresholdingChoice = WidgetTool.getComboInput(self,
-                                                                                         "Thresholding Method: ",
-                                                                                         self.thresholdingMethods)
-        self.thresholdingChoice.setCurrentText(self.segmentTrunk.options['thresholding'])
         openingRadiusLabel, self.openingInput = WidgetTool.getLineInput(self, "Opening radius: ",
                                                               self.options['opening'],
                                                               self.fieldWidth,
                                                               self.openingChanged)
-        closingRadiusLabel, self.closingInput = WidgetTool.getLineInput(self, "Closing radius: ",
-                                                              self.options['closing'],
-                                                              self.fieldWidth,
-                                                              self.closingChanged)
         strokeWidthLabel, self.strokeWidthInput = WidgetTool.getLineInput(self, "Stroke width: ",
                                                                           self.options['stroke'],
                                                                           self.fieldWidth,
                                                                           self.strokeWidthChanged)
-        interpolationLabel, self.interpolationInput = WidgetTool.getLineInput(self, "Interpolation interval: ",
-                                                                              self.options['interpolation'],
-                                                                              self.fieldWidth,
-                                                                              self.interpolationIntervalChanged)
-        vectorsLabel, self.vectorsInput = WidgetTool.getLineInput(self, "Vectors: ",
-                                                                  self.options['vectors'],
-                                                                  self.fieldWidth,
-                                                                  self.vectorsChanged)
-        barkLabel, self.barkVectorsInput = WidgetTool.getLineInput(self, "Bark Vectors: ",
-                                                            self.options['bark'],
-                                                            self.fieldWidth,
-                                                            self.barkChanged)
         saveButton = QPushButton("&Save")
         saveButton.clicked.connect(self.saveOptionsButtonPressed)
         saveAndCloseButton = QPushButton("Save && Close")
@@ -401,14 +357,8 @@ class SegmentTrunkOptionsWidget(QWidget):
         formLayout = QFormLayout()
         formLayout.setLabelAlignment(Qt.AlignRight)
         formLayout.addRow(scaleFactorLabel, self.scaleFactorInput)
-        formLayout.addRow(sigmaLabel, self.sigmaInput)
-        formLayout.addRow(thresholdingMethodLabel, self.thresholdingChoice)
         formLayout.addRow(openingRadiusLabel, self.openingInput)
-        formLayout.addRow(closingRadiusLabel, self.closingInput)
         formLayout.addRow(strokeWidthLabel, self.strokeWidthInput)
-        formLayout.addRow(interpolationLabel, self.interpolationInput)
-        formLayout.addRow(vectorsLabel, self.vectorsInput)
-        formLayout.addRow(barkLabel, self.barkVectorsInput)
         mainLayout.addLayout(formLayout)
         mainLayout.addLayout(buttonsLayout)
         self.setLayout(mainLayout)
@@ -448,12 +398,8 @@ class SegmentTrunkOptionsWidget(QWidget):
 
     def setOptionsFromDialog(self):
         self.segmentTrunk.options['scale'] = int(self.scaleFactorInput.text().strip())
-        self.segmentTrunk.options['sigma'] = float(self.sigmaInput.text().strip())
-        self.segmentTrunk.options['thresholding'] = self.thresholdingChoice.currentText().strip()
         self.segmentTrunk.options['opening'] = int(self.openingInput.text().strip())
-        self.segmentTrunk.options['closing'] = int(self.closingInput.text().strip())
         self.segmentTrunk.options['stroke'] = int(self.strokeWidthInput.text().strip())
-        self.segmentTrunk.options['interpolation'] = int(self.interpolationInput.text().strip())
 
 
     def saveOptionsButtonPressed(self):

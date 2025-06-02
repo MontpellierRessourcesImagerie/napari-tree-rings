@@ -1,7 +1,19 @@
 import os
+import appdirs
 import abc
-from napari.qt.threading import create_worker
 
+from napari.layers import Shapes
+from napari.qt.threading import create_worker
+from skimage import measure
+from skimage.transform import rescale, resize
+from scipy.ndimage import gaussian_filter
+from skimage.filters import threshold_mean
+from skimage.color import rgb2gray
+from scipy.ndimage import binary_fill_holes
+from skimage import morphology
+import cv2
+from shapelysmooth import taubin_smooth
+from skimage.morphology import convex_hull_image
 
 
 class Operation(object):
@@ -104,28 +116,17 @@ class SegmentTrunk(Operation):
 
         super(SegmentTrunk, self).__init__()
         self.layer = layer
-        if layer:
-            self.image = self.fiji.ij.py.to_java(layer)
-            ImageJFunctions = jimport("net.imglib2.img.display.imagej.ImageJFunctions")
-            self.image = ImageJFunctions.wrap(self.image, "tree")
         self.result = None
-
-
-    def getPluginPath(self):
-        """Answer the path to the plugin subfolder, that contains the options file
-        for this command."""
-
-        pluginPath = self.fiji.getImageJPluginsPath()
-        path = os.path.join(pluginPath, "mri-tree-rings-tool")
-        return path
 
 
     def getOptionsPath(self):
         """Answer the path to the options text file of the segment-trunk command.
         """
-        segmentTrunkPluginPath = self.getPluginPath()
-        path = os.path.join(segmentTrunkPluginPath, "tra-options.txt")
-        return path
+        path = appdirs.user_data_dir("napari-tree-rings")
+        if (not os.path.exists(path)):
+            os.makedirs(path)
+        optionsPath = os.path.join(path, "options.txt")
+        return optionsPath
 
 
     def getRunThread(self):
@@ -138,11 +139,8 @@ class SegmentTrunk(Operation):
     def getDefaultOptions(cls):
         """Answer the default options of the segment-trunk command."""
 
-        options = {'scale': 8, 'sigma': 2, 'thresholding': 'Mean',
-                   'opening': 16, 'closing': 8, 'stroke': 8, 'interpolation': 100,
-                   'vectors': '0.7372839,0.63264143,0.23701741,0.91958255,0.35537627,0.16755785,0.69067574,0.64728355,0.3224746',
-                   'bark': '0.7898954,0.5587874,0.25262988,0.5932292,0.7353205,0.3276933,0.57844025,0.5767322,0.5768768',
-                   'min': 200, 'do': False}
+        options = {'scale': 8, 'opening': 96,  'stroke': 8,
+                   }
         return options
 
 
@@ -150,59 +148,40 @@ class SegmentTrunk(Operation):
         """Read the options of the segment-trunk command, run the script-command with the read options in FIJI
         and retrieve the result image."""
 
-        self.readOptions()
-        IJ = jimport("ij.IJ")
-        self.image.show()
-        IJ.run(self.image, "segment trunk", self.getOptionsString(self.options))
-        ids = self.fiji.ij.get("net.imagej.display.ImageDisplayService")
-        view = ids.getActiveDatasetView(ids.getActiveImageDisplay())
-        self.image.close()
-        self.result = self.fiji.ij.py.from_java(view)
-
-'''
-
-from skimage import measure
-from skimage.transform import rescale, resize
-from scipy.ndimage import gaussian_filter
-from skimage.filters import threshold_mean
-from scipy.ndimage import binary_fill_holes
-from skimage import morphology
-import cv2
-from shapelysmooth import taubin_smooth
-
-scale_factor = 8
-
-def keep_largest_region(input_mask):
-    labels_mask = measure.label(input_mask)                       
-    regions = measure.regionprops(labels_mask)
-    regions.sort(key=lambda x: x.area, reverse=True)
-    if len(regions) > 1:
-        for rg in regions[1:]:
-            labels_mask[rg.coords[:,0], rg.coords[:,1]] = 0
-    labels_mask[labels_mask!=0] = 1
-    mask = labels_mask
-    return mask
+        self.options = self.readOptions()
+        image = self.layer.data
+        image = rgb2gray(image)
+        small = rescale(image, 1.0 / self.options.scale, anti_aliasing=True)
+        small = np.squeeze(small)
+        thresh = threshold_mean(small)
+        binary = (small < thresh) * 255
+        largest = self.keep_largest_region(binary)
+        filled = binary_fill_holes(largest) * 255
+        se = morphology.disk(self.options.opening)
+        opened = morphology.binary.binary_opening(filled, se)
+        out = resize(opened, (image.shape[0], image.shape[1])) * 1
+        out = out * 255
+        out = out.astype(np.uint8)
+        se2 = morphology.disk(self.options.scale)
+        out = morphology.binary_erosion(out, se2)
+        chull = convex_hull_image(out)
+        chull = chull * 255
+        chull = chull.astype(np.uint8)
+        contours, hierarchy = cv2.findContours(chull, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        polys = [np.squeeze(e) for e in contours[0]]
+        changed = [np.array([y, x]) for x, y in polys]
+        smoothed = taubin_smooth(changed)
+        self.result = Shapes(smoothed)
 
 
-image = viewer.layers[0].data
-small = rescale(image, 1.0 / scale_factor, anti_aliasing=True)
-small = np.squeeze(small)
-thresh = threshold_mean(small)
-binary = (blurred < thresh) * 255
-largest = keep_largest_region(binary)
-filled = binary_fill_holes(largest) * 255
-se = morphology.disk(96)
-opened = morphology.binary.binary_opening(filled, se)
-out = resize(opened, (image.shape[0], image.shape[1])) * 1
-out = out * 255
-out = out.astype(np.uint8)
-se2 = morphology.disk(scale_factor)
-out = morphology.binary_erosion(out, se2)
-out = out * 255
-out = out.astype(np.uint8)
-contours, hierarchy = cv2.findContours(out, cv2.RETR_EXTERNAL,  cv2.CHAIN_APPROX_SIMPLE)
-polys = [np.squeeze(e) for e in contours[0]]
-changed = [np.array([y, x]) for x, y in polys]
-smoothed = taubin_smooth(changed)
-
-'''
+    @classmethod
+    def keep_largest_region(cls, input_mask):
+        labels_mask = measure.label(input_mask)
+        regions = measure.regionprops(labels_mask)
+        regions.sort(key=lambda x: x.area, reverse=True)
+        if len(regions) > 1:
+            for rg in regions[1:]:
+                labels_mask[rg.coords[:, 0], rg.coords[:, 1]] = 0
+        labels_mask[labels_mask != 0] = 1
+        mask = labels_mask
+        return mask

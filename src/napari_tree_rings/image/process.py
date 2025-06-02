@@ -13,7 +13,7 @@ from urllib.request import urlretrieve
 from skimage import measure
 from scipy import ndimage
 from napari.layers import Image, Layer, Labels, Shapes
-from napari_tree_rings.image.fiji import SegmentTrunk
+from napari_tree_rings.image.segmentation import SegmentTrunk
 from napari_tree_rings.image.file_util import TiffFileTags
 from napari_tree_rings.image.measure import MeasureShape, TableTool
 from tree_ring_analyzer.segmentation import TreeRingSegmentation
@@ -86,15 +86,7 @@ class TrunkSegmenter(Segmenter):
 
         self.segmentTrunkOp = SegmentTrunk(self.layer)
         self.segmentTrunkOp.run()
-        py_image = self.segmentTrunkOp.result
-        shapeLayer = None
-        for _, v in py_image.metadata.items():
-            if isinstance(v, Layer):
-                shapeLayer = v
-            elif isinstance(v, Iterable):
-                for itm in v:
-                    if isinstance(itm, Layer):
-                        shapeLayer = itm
+        shapeLayer = self.segmentTrunkOp.result
         shapeLayer.scale = self.layer.scale
         shapeLayer.units = self.layer.units
         shapeLayer.metadata['parent'] = self.layer
