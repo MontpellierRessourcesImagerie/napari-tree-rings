@@ -12,6 +12,7 @@ from skimage.color import rgb2gray
 from scipy.ndimage import binary_fill_holes
 from skimage import morphology
 import cv2
+import numpy as np
 from shapelysmooth import taubin_smooth
 from skimage.morphology import convex_hull_image
 
@@ -75,6 +76,7 @@ class Operation(object):
         """Read the options of the command from the options file if it exists. Otherwise write an options file with
         the default options of the command first."""
 
+        default = self.getDefaultOptions()
         path = self.getOptionsPath()
         options = self.getDefaultOptions()
         content = ""
@@ -86,7 +88,7 @@ class Operation(object):
         for line in lines:
             if '=' in line:
                 parts = line.split("=")
-                options[parts[0]] = parts[1]
+                options[parts[0].strip()] = type(default[parts[0].strip()])(parts[1].strip())
             else:
                 options[line] = True
         return options
@@ -151,18 +153,18 @@ class SegmentTrunk(Operation):
         self.options = self.readOptions()
         image = self.layer.data
         image = rgb2gray(image)
-        small = rescale(image, 1.0 / self.options.scale, anti_aliasing=True)
+        small = rescale(image, 1.0 / self.options['scale'], anti_aliasing=True)
         small = np.squeeze(small)
         thresh = threshold_mean(small)
         binary = (small < thresh) * 255
         largest = self.keep_largest_region(binary)
         filled = binary_fill_holes(largest) * 255
-        se = morphology.disk(self.options.opening)
+        se = morphology.disk(self.options['opening'])
         opened = morphology.binary.binary_opening(filled, se)
         out = resize(opened, (image.shape[0], image.shape[1])) * 1
         out = out * 255
         out = out.astype(np.uint8)
-        se2 = morphology.disk(self.options.scale)
+        se2 = morphology.disk(self.options['scale'])
         out = morphology.binary_erosion(out, se2)
         chull = convex_hull_image(out)
         chull = chull * 255
@@ -170,8 +172,8 @@ class SegmentTrunk(Operation):
         contours, hierarchy = cv2.findContours(chull, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         polys = [np.squeeze(e) for e in contours[0]]
         changed = [np.array([y, x]) for x, y in polys]
-        smoothed = taubin_smooth(changed)
-        self.result = Shapes(smoothed)
+        smoothed = [np.array(taubin_smooth(changed))]
+        self.result = Shapes(smoothed, shape_type='polygon')
 
 
     @classmethod
