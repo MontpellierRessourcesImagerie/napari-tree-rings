@@ -134,14 +134,17 @@ class RingsSegmenter(Segmenter):
         import tensorflow as tf
         self.loadOptions()
         image = self.layer.data
-        ringsModel = tf.keras.models.load_model(os.path.join(self.ringsModelsPath, self.options['ringsModel']))
-        pithModel = tf.keras.models.load_model(os.path.join(self.pithModelsPath, self.options['pithModel']))
-        segmentation = TreeRingSegmentation(ringsModel, pithModel)
+        ringsModel = tf.keras.models.load_model(os.path.join(self.ringsModelsPath, self.options['ringsModel']), compile=False)
+        pithModel = tf.keras.models.load_model(os.path.join(self.pithModelsPath, self.options['pithModel']), compile=False)
+        channel = pithModel.get_config()['layers'][0]['config']['batch_shape'][-1]
+        if channel == 1:
+            image = (0.299 * image[:, :, 0] + 0.587 * image[:, :, 1] + 0.114 * image[:, :, 2])[:, :, None]
+        segmentation = TreeRingSegmentation()
         segmentation.patchSize = self.options['patchSize']
         segmentation.overlap = self.options['overlap']
         segmentation.batchSize = self.options['batchSize']
         segmentation.thickness = self.options['thickness']
-        segmentation.segmentImage(image)
+        segmentation.segmentImage(ringsModel, pithModel, image)
         rings = self.maskToPolygons(segmentation.maskRings)
         pith = self.maskToPolygons(segmentation.pith)
         self.removeInnerRing(rings, pith)

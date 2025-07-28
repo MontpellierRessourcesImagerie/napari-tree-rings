@@ -26,12 +26,18 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
     "brightest-path-lib",
-    "tree-ring-analyzer @ git+https://github.com/MontpellierRessourcesImagerie/tree-ring-analyzer.git@v0.1.1",
+    "tree-ring-analyzer @ git+https://github.com/MontpellierRessourcesImagerie/tree-ring-analyzer.git@v0.1.3",
     "numpy",
     "magicgui",
     "qtpy",
     "scikit-image",
     "appdirs",
+    "scyjava",
+    "pyperclip",
+    "shapelysmooth",
+    "imagej",
+    "napari-imagej",
+    "scikit-learn"
 ]
 
 [project.optional-dependencies]
