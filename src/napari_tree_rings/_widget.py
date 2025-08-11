@@ -214,11 +214,11 @@ class SegmentTrunkWidget(QWidget):
             return
         if not self.outputFolder or not (os.path.exists(self.outputFolder) and os.path.isdir(self.outputFolder)):
             return
-        imagePaths = os.listdir(self.sourceFolder)
+        # imagePaths = os.listdir(self.sourceFolder)
         self.batchSegmenter = BatchSegmentTrunk(self.sourceFolder, self.outputFolder)
         worker = create_worker(self.batchSegmenter.run,
-                               _progress={'total': len(imagePaths), 'desc': 'Batch Segment Trunk'})
-        worker.yielded.connect(self.onTableChanged)
+                               _progress={'desc': 'Batch Segment Trunk'})
+        # worker.yielded.connect(self.onTableChanged)
         worker.finished.connect(self.activateButtons)
         self.deactivateButtons()
         worker.start()
@@ -231,6 +231,7 @@ class SegmentTrunkWidget(QWidget):
         self.tableDockWidget.close()
         self.measurements = self.segmenter.measurements
         self.table = TableView(self.measurements)
+        self.table.saveData()
         self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
                                                                   tabify=False)
         self.activateButtons()
@@ -243,6 +244,7 @@ class SegmentTrunkWidget(QWidget):
         self.tableDockWidget.close()
         self.measurements = self.ringsSegmenter.measurements
         self.table = TableView(self.measurements)
+        self.table.saveData()
         self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
                                                                   tabify=False)
         self.activateButtons()

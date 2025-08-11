@@ -1,5 +1,6 @@
 from tifffile import TiffFile
 from napari.qt.threading import create_worker
+import pint
 
 
 class TiffFileTags:
@@ -12,6 +13,7 @@ class TiffFileTags:
         self.pixelSize = 1
         self.unit = "pixel"
         self.path = path
+        self.compatibleUnit = pint.get_application_registry()
 
 
     def getPixelSizeAndUnit(self):
@@ -33,6 +35,13 @@ class TiffFileTags:
             self.unit = parts[1].split("=")[1]
             if self.unit=='mkm':
                 self.unit = "µm"
+            try:
+                if self.unit not in self.compatibleUnit:
+                    self.unit = 'pixel'
+                    self.pixelSize = 1
+            except:
+                self.unit = 'pixel'
+                self.pixelSize = 1
 
 
     def getPixelSizeAndUnitWorker(self):

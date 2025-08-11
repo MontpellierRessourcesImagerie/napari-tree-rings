@@ -17,10 +17,9 @@ class TableTool:
         for key, value in tableA.items():
             if key in tableB.keys():
                 tableB[key] = np.append(tableB[key], [value])
-        for key, value in tableA.items():
-            if not key in tableB.keys():
+            else:
                 column = np.array([float('nan')] * len(list(tableA.keys())[0]))
-                tableB[key] = np.append(column, [value])
+                tableB[key] = np.append(column, [value])           
 
 
 

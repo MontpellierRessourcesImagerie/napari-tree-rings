@@ -7,7 +7,7 @@ import tifffile as tiff
 import numpy as np
 import datetime
 from pathlib import Path
-from pandas import DataFrame
+import pandas as pd
 from typing import Iterable
 from urllib.request import urlretrieve
 from skimage import measure
@@ -17,6 +17,7 @@ from napari_tree_rings.image.segmentation import SegmentTrunk
 from napari_tree_rings.image.file_util import TiffFileTags
 from napari_tree_rings.image.measure import MeasureShape, TableTool
 from tree_ring_analyzer.segmentation import TreeRingSegmentation
+import tensorflow as tf
 
 
 class Segmenter(object):
@@ -129,26 +130,29 @@ class RingsSegmenter(Segmenter):
         self.resultsLayer = None
         self.minRadiusDeltaPithInnerRing = 3
 
+        self.ringsModel = tf.keras.models.load_model(os.path.join(self.ringsModelsPath, self.options['ringsModel']), compile=False)
+        self.pithModel = tf.keras.models.load_model(os.path.join(self.pithModelsPath, self.options['pithModel']), compile=False)
+        self.channel = self.pithModel.get_config()['layers'][0]['config']['batch_shape'][-1]
+
 
     def segment(self):
-        import tensorflow as tf
-        self.loadOptions()
         image = self.layer.data
-        ringsModel = tf.keras.models.load_model(os.path.join(self.ringsModelsPath, self.options['ringsModel']), compile=False)
-        pithModel = tf.keras.models.load_model(os.path.join(self.pithModelsPath, self.options['pithModel']), compile=False)
-        channel = pithModel.get_config()['layers'][0]['config']['batch_shape'][-1]
-        if channel == 1:
+        
+        if self.channel == 1:
             image = (0.299 * image[:, :, 0] + 0.587 * image[:, :, 1] + 0.114 * image[:, :, 2])[:, :, None]
         segmentation = TreeRingSegmentation()
         segmentation.patchSize = self.options['patchSize']
         segmentation.overlap = self.options['overlap']
         segmentation.batchSize = self.options['batchSize']
         segmentation.thickness = self.options['thickness']
-        segmentation.segmentImage(ringsModel, pithModel, image)
-        rings = self.maskToPolygons(segmentation.maskRings)
-        pith = self.maskToPolygons(segmentation.pith)
-        self.removeInnerRing(rings, pith)
-        self.resultsLayer = Shapes(rings + pith,
+        segmentation.lossType = 'H0'
+        segmentation.resize = 5
+        segmentation.segmentImage(self.ringsModel, self.pithModel, image)
+        # rings = self.maskToPolygons(segmentation.maskRings)
+        # pith = self.maskToPolygons(segmentation.pith)
+        # self.removeInnerRing(rings, pith)
+        rings = self.ringToPolygons(segmentation.predictedRings)
+        self.resultsLayer = Shapes(rings,
                                    edge_width=8,
                                    face_color='white',
                                    edge_color='red',
@@ -172,6 +176,17 @@ class RingsSegmenter(Segmenter):
         radiusPith = math.sqrt(areaPith) / math.pi
         if radiusRing - radiusPith < self.minRadiusDeltaPithInnerRing:
             ringPolygons.pop()
+
+
+    @classmethod
+    def ringToPolygons(cls, datas):
+        len_data = [len(data) for data in datas]
+        sort_leng_data = np.argsort(np.array(len_data)[1:])[::-1] + 1
+        rings = []
+        for po in sort_leng_data:
+            rings.append(list(datas[po][:, 0, ::-1]))
+        rings.append(list(datas[0][:, 0, ::-1]))
+        return rings
 
 
     @classmethod
@@ -320,6 +335,9 @@ class BatchSegmentTrunk:
         self.segmenter = None
         if not imageFileNames:
             return
+        
+        self.ringSegmenter = RingsSegmenter(None)
+        self.segmenter = TrunkSegmenter(None)
         for imageFilename in imageFileNames:
             path = os.path.join(self.sourceFolder, imageFilename)
             img = tiff.imread(path)
@@ -328,18 +346,21 @@ class BatchSegmentTrunk:
             imageLayer.name = imageFilename
             imageLayer.metadata['name'] = imageFilename
 
-            self.segmenter = TrunkSegmenter(imageLayer)
-            self.segmenter.measurements = self.measurements
+            self.ringSegmenter.layer = imageLayer
+            self.ringSegmenter.measurements = dict()
+            self.ringSegmenter.setPixelSizeAndUnit()
+            self.ringSegmenter.segment()
+            self.ringSegmenter.measure()
+            df = pd.DataFrame(self.ringSegmenter.measurements)
+
+            self.segmenter.layer = imageLayer
+            self.segmenter.measurements = dict()
             self.segmenter.setPixelSizeAndUnit()
             self.segmenter.segment()
             self.segmenter.measure()
+            df = pd.concat([df, pd.DataFrame(self.segmenter.measurements)], ignore_index=True)
 
-            self.ringSegmenter = RingsSegmenter(imageLayer)
-            self.ringSegmenter.measurements = self.measurements
-            self.ringSegmenter.segment()
-            self.ringSegmenter.measure()
-
-            self.measurements = self.ringSegmenter.measurements
+            # self.measurements = self.segmenter.measurements
             # TableTool.addTableAToB(self.ringSegmenter.measurements, self.measurements)
             csvFilename = os.path.splitext(imageFilename)[0] + ".csv"
             csvRingsFilename = os.path.splitext(imageFilename)[0] + "_rings.csv"
@@ -347,8 +368,11 @@ class BatchSegmentTrunk:
             ringsPath = os.path.join(self.outputFolder, csvRingsFilename)
             self.segmenter.shapeLayer.save(path)
             self.ringSegmenter.resultsLayer.save(ringsPath)
-            yield self.measurements
-        time = str(datetime.datetime.now())
-        tablePath = os.path.join(self.outputFolder, time + "_trunk-measurements.csv")
-        df = DataFrame(self.segmenter.measurements)
-        df.to_csv(tablePath)
+            # yield self.measurements
+
+            area = np.array(df['area'])
+            df['area_growth'] = np.concatenate([[area[0]], area[1:] - area[:-1]])
+            df.to_csv(os.path.join(self.outputFolder, os.path.splitext(imageFilename)[0] + '_parameters.csv'))
+
+        # time = str(datetime.datetime.now())
+        # tablePath = os.path.join(self.outputFolder, time + "_trunk-measurements.csv")

@@ -161,6 +161,8 @@ class SegmentTrunk(Operation):
         filled = binary_fill_holes(largest) * 255
         se = morphology.disk(self.options['opening'])
         opened = morphology.binary.binary_opening(filled, se)
+        if len(np.unique(opened)) == 1:
+            opened = filled / 255
         out = resize(opened, (image.shape[0], image.shape[1])) * 1
         out = out * 255
         out = out.astype(np.uint8)

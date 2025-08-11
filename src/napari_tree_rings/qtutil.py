@@ -4,6 +4,9 @@ from qtpy.QtWidgets import QLabel, QLineEdit, QComboBox, QTableWidget, QTableWid
 from qtpy.QtCore import Qt, QVariant
 from napari.utils import notifications
 from napari_tree_rings.array_util import ArrayUtil
+import appdirs
+import os
+import pandas as pd
 
 
 class WidgetTool:
@@ -161,3 +164,12 @@ class TableView(QTableWidget):
         remainingHeadings = [labels[index] for index in columnIndices]
         result = "\t".join(remainingHeadings) + "\n" + lines
         return result
+    
+    def saveData(self, path=None):
+        table = pd.DataFrame(self.data)
+        table = table[table['image'] == np.array(table['image'])[-1]]
+        if path is None:
+            path = os.path.join(appdirs.user_data_dir("napari-tree-rings"), 'results')
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        table.to_csv(os.path.join(path, self.data['image'][-1] + '_table.csv'))
