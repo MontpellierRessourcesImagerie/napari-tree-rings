@@ -370,8 +370,13 @@ class BatchSegmentTrunk:
             self.ringSegmenter.resultsLayer.save(ringsPath)
             # yield self.measurements
 
+            # Example of area_growth
             area = np.array(df['area'])
             df['area_growth'] = np.concatenate([[area[0]], area[1:] - area[:-1]])
+
+            # If you would like to add anymore measurements, please add them here
+            ## 
+
             df.to_csv(os.path.join(self.outputFolder, os.path.splitext(imageFilename)[0] + '_parameters.csv'))
 
         # time = str(datetime.datetime.now())
