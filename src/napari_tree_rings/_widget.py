@@ -50,8 +50,10 @@ class SegmentTrunkWidget(QWidget):
         self.runSegmentRingsButton = None
         self.sourceFolderInput = None
         self.outputFolderInput = None
+        self.outputRingFolderInput = None
         self.sourceFolder = str(Path.home())
         self.outputFolder = str(Path.home())
+        self.outputRingFolder = str(Path.home())
         self.createLayout()
         self.tableDockWidget = self.viewer.window.add_dock_widget(self.table,
                                                                   area='right', name='measurements', tabify=False)
@@ -59,11 +61,11 @@ class SegmentTrunkWidget(QWidget):
 
 
     def createLayout(self):
-        segmentLayout = self.createSegmentTrunkLayout()
+        # segmentLayout = self.createSegmentTrunkLayout()
         segmentRingsLayout = self.createSegmentRingsLayout()
         batchLayout = self.createBatchProcessingLayout()
         mainLayout = QVBoxLayout()
-        mainLayout.addLayout(segmentLayout)
+        # mainLayout.addLayout(segmentLayout)
         mainLayout.addLayout(segmentRingsLayout)
         mainLayout.addLayout(batchLayout)
         self.setLayout(mainLayout)
@@ -86,12 +88,14 @@ class SegmentTrunkWidget(QWidget):
 
 
     def createSegmentRingsLayout(self):
+        outputFileLayout = self.createRingOutputFileLayout()
         segmentVLayout = QVBoxLayout()
         segmentLayout = QHBoxLayout()
         self.runSegmentRingsButton = QPushButton("Run")
         self.runSegmentRingsButton.clicked.connect(self.onRunSegmentRingsButtonPressed)
         self.runSegmentRingsButton.setEnabled(False)
         self.segmentRingsOptionsButton = self.getOptionsButton(self.onSegmentRingsOptionsButtonPressed)
+        segmentLayout.addLayout(outputFileLayout)
         segmentLayout.addWidget(self.runSegmentRingsButton)
         segmentLayout.addWidget(self.segmentRingsOptionsButton)
         segmentRingsGroupBox = QGroupBox("Segment Rings")
@@ -134,7 +138,21 @@ class SegmentTrunkWidget(QWidget):
     @classmethod
     def getGroupBoxMargins(cls):
         return 10, 20, 10, 20
+    
 
+    def createRingOutputFileLayout(self):
+        outputRingFileLayout = QHBoxLayout()
+        outputRingFolderLabel, self.outputRingFolderInput = WidgetTool.getLineInput(self, "Output: ",
+                                                                            self.outputRingFolder,
+                                                                            self.fieldWidth,
+                                                                            self.outputRingFolderChanged)
+        outputRingFolderBrowseButton = QPushButton("Browse")
+        outputRingFolderBrowseButton.clicked.connect(self.browseRingOutputFolderClicked)
+        outputRingFileLayout.addWidget(outputRingFolderLabel)
+        outputRingFileLayout.addWidget(self.outputRingFolderInput)
+        outputRingFileLayout.addWidget(outputRingFolderBrowseButton)
+        return outputRingFileLayout
+    
 
     def createOutputFileLayout(self):
         outputFileLayout = QHBoxLayout()
@@ -175,7 +193,7 @@ class SegmentTrunkWidget(QWidget):
 
 
     def onStartUpFinished(self):
-        self.runButton.setEnabled(True)
+        # self.runButton.setEnabled(True)
         self.runSegmentRingsButton.setEnabled(True)
         self.runBatchButton.setEnabled(True)
 
@@ -200,12 +218,20 @@ class SegmentTrunkWidget(QWidget):
         if not layer or not type(layer) is Image:
             return
         layer.metadata['path'] = layer.source.path
+
         self.ringsSegmenter = RingsSegmenter(layer)
         self.ringsSegmenter.measurements = self.measurements
-        worker = create_worker(self.ringsSegmenter.run,
+        workerRing = create_worker(self.ringsSegmenter.run,
                                _progress={'total': 4, 'desc': 'Segment Rings & Pith'})
-        worker.finished.connect(self.onRingsSegmentationFinished)
+        workerRing.finished.connect(self.onRingsSegmentationFinished)
         self.deactivateButtons()
+        workerRing.start()
+
+        self.segmenter = TrunkSegmenter(layer)
+        self.segmenter.measurements = self.measurements
+        worker = create_worker(self.segmenter.run,
+                               _progress={'total': 4, 'desc': 'Segment Trunk'})
+        worker.finished.connect(self.onSegmentationFinished)
         worker.start()
 
 
@@ -231,7 +257,7 @@ class SegmentTrunkWidget(QWidget):
         self.tableDockWidget.close()
         self.measurements = self.segmenter.measurements
         self.table = TableView(self.measurements)
-        self.table.saveData()
+        self.table.saveData(self.outputRingFolder)
         self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
                                                                   tabify=False)
         self.activateButtons()
@@ -244,24 +270,26 @@ class SegmentTrunkWidget(QWidget):
         self.tableDockWidget.close()
         self.measurements = self.ringsSegmenter.measurements
         self.table = TableView(self.measurements)
-        self.table.saveData()
+        # self.table.saveData(self.outputRingFolder)
         self.tableDockWidget = self.viewer.window.add_dock_widget(self.table, area='right', name='measurements',
                                                                   tabify=False)
-        self.activateButtons()
+        # self.activateButtons()
 
 
     def activateButtons(self):
-        self.runButton.setEnabled(True)
+        # self.runButton.setEnabled(True)
         self.runSegmentRingsButton.setEnabled(True)
         self.runBatchButton.setEnabled(True)
-        self.segmentTrunkOptionsButton.setEnabled(True)
+        self.segmentRingsOptionsButton.setEnabled(True)
+        # self.segmentTrunkOptionsButton.setEnabled(True)
 
 
     def deactivateButtons(self):
-        self.runButton.setEnabled(False)
+        # self.runButton.setEnabled(False)
         self.runSegmentRingsButton.setEnabled(False)
         self.runBatchButton.setEnabled(False)
-        self.segmentTrunkOptionsButton.setEnabled(False)
+        self.segmentRingsOptionsButton.setEnabled(False)
+        # self.segmentTrunkOptionsButton.setEnabled(False)
 
 
     def onOptionsButtonPressed(self):
@@ -272,6 +300,9 @@ class SegmentTrunkWidget(QWidget):
     def onSegmentRingsOptionsButtonPressed(self):
         optionsWidget = SegmentRingsOptionsWidget(self.viewer)
         self.viewer.window.add_dock_widget(optionsWidget, area='right', name='Options of Segment Rings ')
+
+        optionsWidget = SegmentTrunkOptionsWidget(self.viewer)
+        self.viewer.window.add_dock_widget(optionsWidget, area='right', name='Options of Segment Trunk ')
 
 
     def addTrunkSegmentationToViewer(self, v):
@@ -290,6 +321,10 @@ class SegmentTrunkWidget(QWidget):
         pass
 
 
+    def outputRingFolderChanged(self):
+        pass
+
+
     def browseSourceFolderClicked(self):
         sourceFolderFromUser = QFileDialog.getExistingDirectory(self, "Source Folder", self.sourceFolder,
                                                                 QFileDialog.ShowDirsOnly)
@@ -304,6 +339,14 @@ class SegmentTrunkWidget(QWidget):
         if outputFolderFromUser:
             self.outputFolder = outputFolderFromUser
             self.outputFolderInput.setText(self.outputFolder)
+
+
+    def browseRingOutputFolderClicked(self):
+        outputRingFolderFromUser = QFileDialog.getExistingDirectory(self, "Output Folder", self.outputFolder,
+                                                                QFileDialog.ShowDirsOnly)
+        if outputRingFolderFromUser:
+            self.outputRingFolder = outputRingFolderFromUser
+            self.outputRingFolderInput.setText(self.outputRingFolder)
 
 
     @Slot(object)
@@ -341,10 +384,6 @@ class SegmentTrunkOptionsWidget(QWidget):
                                                               self.options['opening'],
                                                               self.fieldWidth,
                                                               self.openingChanged)
-        strokeWidthLabel, self.strokeWidthInput = WidgetTool.getLineInput(self, "Stroke width: ",
-                                                                          self.options['stroke'],
-                                                                          self.fieldWidth,
-                                                                          self.strokeWidthChanged)
         saveButton = QPushButton("&Save")
         saveButton.clicked.connect(self.saveOptionsButtonPressed)
         saveAndCloseButton = QPushButton("Save && Close")
@@ -360,7 +399,6 @@ class SegmentTrunkOptionsWidget(QWidget):
         formLayout.setLabelAlignment(Qt.AlignRight)
         formLayout.addRow(scaleFactorLabel, self.scaleFactorInput)
         formLayout.addRow(openingRadiusLabel, self.openingInput)
-        formLayout.addRow(strokeWidthLabel, self.strokeWidthInput)
         mainLayout.addLayout(formLayout)
         mainLayout.addLayout(buttonsLayout)
         self.setLayout(mainLayout)
@@ -401,7 +439,6 @@ class SegmentTrunkOptionsWidget(QWidget):
     def setOptionsFromDialog(self):
         self.segmentTrunk.options['scale'] = int(self.scaleFactorInput.text().strip())
         self.segmentTrunk.options['opening'] = int(self.openingInput.text().strip())
-        self.segmentTrunk.options['stroke'] = int(self.strokeWidthInput.text().strip())
 
 
     def saveOptionsButtonPressed(self):
@@ -460,10 +497,18 @@ class SegmentRingsOptionsWidget(QWidget):
                                                                       self.options['batchSize'],
                                                                       self.fieldWidth,
                                                                       self.batchSizeChanged)
-        thicknessLabel, self.thicknessInput = WidgetTool.getLineInput(self, "Thickness ",
+        thicknessLabel, self.thicknessInput = WidgetTool.getLineInput(self, "Thickness: ",
                                                                       self.options['thickness'],
                                                                       self.fieldWidth,
                                                                       self.thicknessChanged)
+        resizeLabel, self.resizeInput = WidgetTool.getLineInput(self, "Rescale Factor: ",
+                                                                      self.options['resize'],
+                                                                      self.fieldWidth,
+                                                                      self.resizeChanged)
+        lossTypeLabel, self.lossTypeCombo = WidgetTool.getComboInput(self,
+                                                                    "Heuristic function: ",
+                                                                    ['H0', 'H01', 'H02'])
+        
         saveButton = QPushButton("&Save")
         saveButton.clicked.connect(self.saveOptionsButtonPressed)
         saveAndCloseButton = QPushButton("Save && Close")
@@ -483,6 +528,8 @@ class SegmentRingsOptionsWidget(QWidget):
         formLayout.addRow(overlapLabel, self.overlapInput)
         formLayout.addRow(batchSizeLabel, self.batchSizeInput)
         formLayout.addRow(thicknessLabel, self.thicknessInput)
+        formLayout.addRow(resizeLabel, self.resizeInput)
+        formLayout.addRow(lossTypeLabel, self.lossTypeCombo)
         mainLayout.addLayout(formLayout)
         mainLayout.addLayout(buttonsLayout)
         self.setLayout(mainLayout)
@@ -502,6 +549,10 @@ class SegmentRingsOptionsWidget(QWidget):
 
 
     def thicknessChanged(self):
+        pass
+
+
+    def resizeChanged(self):
         pass
 
 
@@ -531,3 +582,5 @@ class SegmentRingsOptionsWidget(QWidget):
         self.segmentRings.options["overlap"] = int(self.overlapInput.text().strip())
         self.segmentRings.options["batchSize"] = int(self.batchSizeInput.text().strip())
         self.segmentRings.options["thickness"] = int(self.thicknessInput.text().strip())
+        self.segmentRings.options["resize"] = int(self.resizeInput.text().strip())
+        self.segmentRings.options["lossType"] = self.lossTypeCombo.currentText().strip()

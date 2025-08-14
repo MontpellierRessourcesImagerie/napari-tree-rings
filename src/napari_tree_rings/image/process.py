@@ -18,6 +18,8 @@ from napari_tree_rings.image.file_util import TiffFileTags
 from napari_tree_rings.image.measure import MeasureShape, TableTool
 from tree_ring_analyzer.segmentation import TreeRingSegmentation
 import tensorflow as tf
+from napari.qt.threading import create_worker
+
 
 
 class Segmenter(object):
@@ -125,7 +127,7 @@ class RingsSegmenter(Segmenter):
         self.loadPithModels()
         self.loadRingsModels()
         self.options = {'pithModel': self.pithModels[0], 'ringsModel': self.ringsModels[0], 'patchSize': 256,
-                        'overlap': 60, 'batchSize': 8, 'thickness': 1}
+                        'overlap': 60, 'batchSize': 8, 'thickness': 1, 'resize': 5, 'lossType': 'H0'}
         self.loadOptions()
         self.resultsLayer = None
         self.minRadiusDeltaPithInnerRing = 3
@@ -136,17 +138,20 @@ class RingsSegmenter(Segmenter):
 
 
     def segment(self):
+        self.loadOptions()
         image = self.layer.data
         
-        if self.channel == 1:
+        if len(image.shape) == 2:
+            image = image[:, :, None]
+        if self.channel == 1 and image.shape[-1] == 3:
             image = (0.299 * image[:, :, 0] + 0.587 * image[:, :, 1] + 0.114 * image[:, :, 2])[:, :, None]
         segmentation = TreeRingSegmentation()
         segmentation.patchSize = self.options['patchSize']
         segmentation.overlap = self.options['overlap']
         segmentation.batchSize = self.options['batchSize']
         segmentation.thickness = self.options['thickness']
-        segmentation.lossType = 'H0'
-        segmentation.resize = 5
+        segmentation.lossType = self.options['lossType']
+        segmentation.resize = self.options['resize']
         segmentation.segmentImage(self.ringsModel, self.pithModel, image)
         # rings = self.maskToPolygons(segmentation.maskRings)
         # pith = self.maskToPolygons(segmentation.pith)

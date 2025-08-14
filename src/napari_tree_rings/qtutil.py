@@ -172,4 +172,5 @@ class TableView(QTableWidget):
             path = os.path.join(appdirs.user_data_dir("napari-tree-rings"), 'results')
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
+        table.sort_values(['area'])
         table.to_csv(os.path.join(path, self.data['image'][-1] + '_table.csv'))

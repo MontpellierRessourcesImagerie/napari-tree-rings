@@ -23,8 +23,7 @@ https://napari.org/stable/plugins/index.html
 
 ## How to use it?
 Users can export the segmentation findings and estimate bark, ring borders, and pith with ease using the Napari Tree Rings plugin:
-- Run button on the Segment Trunk tag: find the outermost bark just on image
-- Run button on the Segment Rings tag: find the pith and annual rings just one image.
+- Run button on the Segment Rings tag: find the rings in just one image.
 - Run Batch button on the Batch Segment Trunk tag: runs all the images in the folder. 
 
 Users can also modify certain parameters, including the batch size or the expected ring thickness (in pixels). The interface's goal is to assist biologists without having programming expertise by being user-friendly.

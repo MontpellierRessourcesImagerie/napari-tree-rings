@@ -141,8 +141,7 @@ class SegmentTrunk(Operation):
     def getDefaultOptions(cls):
         """Answer the default options of the segment-trunk command."""
 
-        options = {'scale': 8, 'opening': 96,  'stroke': 8,
-                   }
+        options = {'scale': 8, 'opening': 96}
         return options
 
 
@@ -152,7 +151,10 @@ class SegmentTrunk(Operation):
 
         self.options = self.readOptions()
         image = self.layer.data
-        image = rgb2gray(image)
+        if len(image.shape) == 3 and image.shape[-1] == 3:
+            image = rgb2gray(image)
+        elif len(image.shape) == 3 and image.shape[-1] == 1:
+            image = image[:, :, 0]
         small = rescale(image, 1.0 / self.options['scale'], anti_aliasing=True)
         small = np.squeeze(small)
         thresh = threshold_mean(small)
