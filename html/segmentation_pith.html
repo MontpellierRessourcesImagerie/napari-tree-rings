@@ -1,0 +1,244 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pith Prediction using UNet &mdash; napari-tree-rings 0.1.3 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=5b94cef0" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=360bc84d"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Ring Segmentation using Attention UNet" href="segmentation_rings.html" />
+    <link rel="prev" title="How to use “Napari Tree Rings” widget?" href="mga_user_guide.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            napari-tree-rings
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">Quick start: A user guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Pith Prediction using UNet</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#what-is-unet">0. What is UNet?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#get-your-data-ready">1. Get your data ready</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-augmentation">2. Data augmentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cropping-and-resizing">3. Cropping and Resizing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#setup">4. Setup</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation_rings.html">Ring Segmentation using Attention UNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="measure.html">Measures on Tree Rings</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">napari-tree-rings</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Pith Prediction using UNet</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/segmentation_pith.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pith-prediction-using-unet">
+<h1>Pith Prediction using UNet<a class="headerlink" href="#pith-prediction-using-unet" title="Link to this heading"></a></h1>
+<section id="what-is-unet">
+<span id="unet"></span><h2>0. What is UNet?<a class="headerlink" href="#what-is-unet" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>UNet is a deep learning architecture that belongs to the convolutional neural network family.</p></li>
+<li><p>Since it is supervised learning, certain inputs and expected segmentations (== ground-truth) are needed for training.</p></li>
+<li><p>Following training, the model’s inference phase generates a probability map. To turn this probability map into a mask, it must be thresholded.</p></li>
+<li><p>This plugin applies UNet on the pith prediction.</p></li>
+<li><p>Rather than producing an intance segmentation, UNet produces a semantic segmentation. It indicates the response to the query, “Is this pixel part of the pith?”, which will be contained in each pixel.</p></li>
+</ul>
+</section>
+<section id="get-your-data-ready">
+<h2>1. Get your data ready<a class="headerlink" href="#get-your-data-ready" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>You can retrain the model if you have some annotated data by using the file ./src/tree_ring_analyzer/training.py on <a class="reference external" href="https://github.com/MontpellierRessourcesImagerie/tree-ring-analyzer/">Tree Ring Analyzer GitHub</a>.</p></li>
+<li><p>Before starting, you have to perform augmentation (Section 2), and create the two folders named “models” and “history” to store all the new model and history versions you create.</p></li>
+<li><p>You can name the model as you like.</p></li>
+<li><dl class="simple">
+<dt>The outputs produced by this script include:</dt><dd><ul>
+<li><p>history/{name}.json: a dictionary that contains a record of training metrics (e.g., loss, accuracy) for each epoch.</p></li>
+<li><p>models/{name}.keras: a model saved in Keras format.</p></li>
+<li><p>models/{name}.h5: a model saved in H5 format.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</section>
+<section id="data-augmentation">
+<h2>2. Data augmentation<a class="headerlink" href="#data-augmentation" title="Link to this heading"></a></h2>
+<p>To increase the data variablity, we need to apply augmentation to ensure that the model generalizes well to different types of data.</p>
+<dl class="simple">
+<dt>The data augmentation includes:</dt><dd><ul class="simple">
+<li><p><strong>Flipping</strong>: The images are randomly flipped horizontally and/or vertically.</p></li>
+<li><p><strong>Random rotations</strong>: The images are randomly rotated from -20 degrees to 20 degrees.</p></li>
+<li><p><strong>90-degree rotations</strong>: The images are randomly rotated in 90, 180, and 270 degrees.</p></li>
+</ul>
+</dd>
+</dl>
+<p>These augmentations are applied before cropping and training to provide a wider variety of spatial and contextual information.</p>
+</section>
+<section id="cropping-and-resizing">
+<h2>3. Cropping and Resizing<a class="headerlink" href="#cropping-and-resizing" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Since the pith regions are small compared to the whole image size, we have to crop the pith region as 20 % of the height of image to solve the class imbalance problem.</p></li>
+<li><p>We resize the cropped pith input to 256x256 pixels to ensure computational efficiency.</p></li>
+</ul>
+</section>
+<section id="setup">
+<h2>4. Setup<a class="headerlink" href="#setup" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>If you already have a Python environment in which “Tree Ring Analyzer” is installed, it already contains everything you need to prepare dataset and train a model.</p></li>
+<li><p>To prepare dataset, you just have to fill the settings described below, and run the script ./src/tree_ring_analyzer/preprocessing.py.</p></li>
+</ul>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>input_path</p></td>
+<td><p>Directory of original images.</p></td>
+</tr>
+<tr class="row-odd"><td><p>mask_path</p></td>
+<td><p>Directory of ground truths.</p></td>
+</tr>
+<tr class="row-even"><td><p>pith_path</p></td>
+<td><p>Directory to save pre-processed images for training pith-prediction model.</p></td>
+</tr>
+<tr class="row-odd"><td><p>tile_path</p></td>
+<td><p>Directory to save pre-processed images for training ring-segmentation model. If you just want to generate pith dataset, tile_path
+should be None.</p></td>
+</tr>
+<tr class="row-even"><td><p>pithWhole</p></td>
+<td><p>True/False. If True, the pith image will not be cropped (default is False).</p></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p>To launch the training, you just have to fill the settings described below, and run the script ./src/tree_ring_analyzer/training.py.</p></li>
+</ul>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>train_input_path</p></td>
+<td><p>Directory of training input path.</p></td>
+</tr>
+<tr class="row-odd"><td><p>train_mask_path</p></td>
+<td><p>Directory of training mask path.</p></td>
+</tr>
+<tr class="row-even"><td><p>val_input_path</p></td>
+<td><p>Directory of validation input path.</p></td>
+</tr>
+<tr class="row-odd"><td><p>val_mask_path</p></td>
+<td><p>Directory of validation mask path.</p></td>
+</tr>
+<tr class="row-even"><td><p>filter_num</p></td>
+<td><p>The number of filters in UNet architecture (default is [16, 24, 40, 80, 960]).</p></td>
+</tr>
+<tr class="row-odd"><td><p>attention</p></td>
+<td><p>True/False. In this case, attention is False to use UNet for training.</p></td>
+</tr>
+<tr class="row-even"><td><p>output_activation</p></td>
+<td><p>Output activation. In pith prediction, the recommended output activation is ‘sigmoid’.</p></td>
+</tr>
+<tr class="row-odd"><td><p>loss</p></td>
+<td><p>Loss function. In pith prediction, the recommended loss function is bce_dice_loss(bce_coef=0.5)</p></td>
+</tr>
+<tr class="row-even"><td><p>name</p></td>
+<td><p>Name of the saved model.</p></td>
+</tr>
+<tr class="row-odd"><td><p>numEpochs</p></td>
+<td><p>Number of epochs. In pith prediction, the recommended number is 100.</p></td>
+</tr>
+<tr class="row-even"><td><p>input_size</p></td>
+<td><p>Size of input. Default is (256, 256, 1).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="mga_user_guide.html" class="btn btn-neutral float-left" title="How to use “Napari Tree Rings” widget?" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="segmentation_rings.html" class="btn btn-neutral float-right" title="Ring Segmentation using Attention UNet" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Thi-Thu-Khiet Dang, Volker Baecker.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

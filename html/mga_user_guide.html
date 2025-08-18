@@ -1,0 +1,268 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to use “Napari Tree Rings” widget? &mdash; napari-tree-rings 0.1.3 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=5b94cef0" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=360bc84d"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/tabs.js?v=3030b3cb"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Pith Prediction using UNet" href="segmentation_pith.html" />
+    <link rel="prev" title="Quick start: A user guide" href="user_guide.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            napari-tree-rings
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="user_guide.html">Quick start: A user guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="user_guide.html#introduction">1. Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide.html#install-the-plugin">2. Install the plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide.html#notes">3. Notes</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="user_guide.html#quick-start">4. Quick start</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">How to use “Napari Tree Rings” widget?</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#get-your-data-ready">1. Get your data ready</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#workflow">2. Workflow</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples-of-processed-data">3. Examples of processed data</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#workflow-diagram">4. Workflow diagram</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation_pith.html">Pith Prediction using UNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation_rings.html">Ring Segmentation using Attention UNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="measure.html">Measures on Tree Rings</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">napari-tree-rings</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="user_guide.html">Quick start: A user guide</a></li>
+      <li class="breadcrumb-item active">How to use “Napari Tree Rings” widget?</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/mga_user_guide.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="how-to-use-napari-tree-rings-widget">
+<h1>How to use “Napari Tree Rings” widget?<a class="headerlink" href="#how-to-use-napari-tree-rings-widget" title="Link to this heading"></a></h1>
+<section id="get-your-data-ready">
+<h2>1. Get your data ready<a class="headerlink" href="#get-your-data-ready" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>The Napari plugin expects your data to respect a precise format:</dt><dd><ul class="simple">
+<li><p>The images must be available as dissociated TIF images (no jpg, no 3D stack, no video, …).</p></li>
+<li><p>The plugin only accept images in 2D grayscale (Y, X) or 2D RGB (Y, X, 3).</p></li>
+<li><p>In the case of running batch, all the images that you want to process must be in the same folder.</p></li>
+<li><p>Avoid using special characters in the folder’s name. (Tips: <a class="reference external" href="https://doranum.fr/stockage-archivage/comment-nommer-fichiers_10_13143_wgqw-aa59/">Doranum</a>)</p></li>
+<li><p>Both models used by this plugin were trained on images with the size ranging from 2000x2000 to 10000x10000 pixels, you may have troubles if your images out of this size.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>.
+├──<span class="w"> </span>📁<span class="w"> </span>my-awesome-experiment
+│<span class="w">   </span>├──<span class="w"> </span>some-image.tif
+│<span class="w">   </span>├──<span class="w"> </span>another-image.tif
+│<span class="w">   </span>├──<span class="w"> </span>...
+│<span class="w">   </span>└──<span class="w"> </span>last-image.tif
+</pre></div>
+</div>
+</section>
+<section id="workflow">
+<h2>2. Workflow<a class="headerlink" href="#workflow" title="Link to this heading"></a></h2>
+<section id="a-import-your-images">
+<h3>a. Import your images<a class="headerlink" href="#a-import-your-images" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>In this section, you will import your experiment so you can visualize and analyze it.</p></li>
+<li><p>Open the plugin via Plugins &gt; Segment Trunk (Napari Tree Rings).</p></li>
+<li><p>For running only one image, you just have to drag and drop that image into the interface.</p></li>
+<li><p>For running batch, press the <code class="code docutils literal notranslate"><span class="pre">Browse</span></code> button at the <code class="code docutils literal notranslate"><span class="pre">Source</span></code> in the <code class="code docutils literal notranslate"><span class="pre">Batch</span> <span class="pre">Segment</span> <span class="pre">Trunk</span></code> tag and choose the path to the foloder containing your images. It is the path of “my-awesome-experiment” in the previous example.</p></li>
+<li><p>You can adjust the contrast and brightness in the upper-left corner of Napari.</p></li>
+<li><p>If your image doesn’t appear in the viewer anymore, or if it becomes too small, you can click on the little “Home” button in the lower-left corner of Napari to center the view.</p></li>
+</ul>
+</section>
+<section id="b-segment-the-tree-rings-segmentation">
+<h3>b. Segment the tree rings (Segmentation)<a class="headerlink" href="#b-segment-the-tree-rings-segmentation" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>If you would like to change the default configurations before the segmentation, click on the ⚙ button:</p></li>
+</ul>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Options of</p></th>
+<th class="head"><p>Setting</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td rowspan="2"><p>Segment Trunk</p></td>
+<td><p>Scale Factor</p></td>
+<td><p>Controls how much your image is scaled down before processing (default is 8).</p></td>
+</tr>
+<tr class="row-odd"><td><p>Opening radius</p></td>
+<td><p>The size (in pixels) of the structuring element used in the opening operation, which removes small objects
+and smooths boundaries in the image (default is 96).</p></td>
+</tr>
+<tr class="row-even"><td rowspan="7"><p>Segment Rings</p></td>
+<td><p>Ring model</p></td>
+<td><p>Choose model for segmenting tree ring boundaries.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Pith model</p></td>
+<td><p>Choose model for segmenting pith.</p></td>
+</tr>
+<tr class="row-even"><td><p>Patch size</p></td>
+<td><p>Image will be cropped into smaller patches to ensure computational cost. The default is 256, since it is the
+size we used to train our models.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Overlap</p></td>
+<td><p>The proportion of length shared between adjacent image tiles to ensure smooth transitions and avoid edge
+artifacts. The default is 60.</p></td>
+</tr>
+<tr class="row-even"><td><p>Batch size</p></td>
+<td><p>The number of tiles processed together in a single iteration. The default is 8.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Rescale Factor</p></td>
+<td><p>Controls how much your image is scaled down before post-processing (default is 5).</p></td>
+</tr>
+<tr class="row-even"><td><p>Heuristic function</p></td>
+<td><p>Choose the heuristic function applied in the post-processing of A-star algorithm. Default is H0.</p></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p>You have to click the <code class="code docutils literal notranslate"><span class="pre">Save</span></code> button to save the new configurations.</p></li>
+<li><p>For running only one image, you can choose the output folder (to export CSV file) by pressing the <code class="code docutils literal notranslate"><span class="pre">Browse</span></code> button at the <code class="code docutils literal notranslate"><span class="pre">Output</span></code> in the <code class="code docutils literal notranslate"><span class="pre">Segment</span> <span class="pre">Rings</span></code> tag.</p></li>
+<li><p>For running batch, press the <code class="code docutils literal notranslate"><span class="pre">Browse</span></code> button at the <code class="code docutils literal notranslate"><span class="pre">Output</span></code> in the <code class="code docutils literal notranslate"><span class="pre">Batch</span> <span class="pre">Segment</span> <span class="pre">Trunk</span></code> tag.</p></li>
+<li><p>You can just click the <code class="code docutils literal notranslate"><span class="pre">Run</span></code> button in <code class="code docutils literal notranslate"><span class="pre">Segment</span> <span class="pre">Rings</span></code> tag to start the segmentation on one image, or <code class="code docutils literal notranslate"><span class="pre">Run</span> <span class="pre">Batch</span></code> button in <code class="code docutils literal notranslate"><span class="pre">Batch</span> <span class="pre">Segment</span> <span class="pre">Trunk</span></code> tag to start the batch segmentation.</p></li>
+<li><p>The first time, the models will have to be downloaded from internet.</p></li>
+</ul>
+</section>
+<section id="c-extract-measures-measures">
+<h3>C. Extract measures (Measures)<a class="headerlink" href="#c-extract-measures-measures" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>The exported CSV files will be extracted at the end of the process.</p></li>
+<li><p>For running one image, there is only one CSV file exported at the chosen output folder, containing necessary measuremnts (except <code class="code docutils literal notranslate"><span class="pre">area_growth</span></code>).</p></li>
+<li><dl class="simple">
+<dt>For running batch, each image will have three exported CSV files:</dt><dd><ul>
+<li><p>{imageName}.csv: containing the coordinates of bark boundary</p></li>
+<li><p>{imageName}_rings.csv: containing the coordinates of ring and pith boundaries.</p></li>
+<li><p>{imageName}_table.csv: containing the necessary measurements.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</section>
+</section>
+<section id="examples-of-processed-data">
+<h2>3. Examples of processed data<a class="headerlink" href="#examples-of-processed-data" title="Link to this heading"></a></h2>
+<div class="sphinx-tabs docutils container">
+<div aria-label="Tabbed content" class="closeable" role="tablist"><button aria-controls="panel-0-0-0" aria-selected="true" class="sphinx-tabs-tab" id="tab-0-0-0" name="0-0" role="tab" tabindex="0">Input images</button><button aria-controls="panel-0-0-1" aria-selected="false" class="sphinx-tabs-tab" id="tab-0-0-1" name="0-1" role="tab" tabindex="-1">Segmented images</button></div><div aria-labelledby="tab-0-0-0" class="sphinx-tabs-panel" id="panel-0-0-0" name="0-0" role="tabpanel" tabindex="0"><table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><a class="reference internal image-reference" href="_images/input-01.png"><img alt="_images/input-01.png" class="align-center" src="_images/input-01.png" style="width: 600px; height: 512px;" />
+</a>
+</td>
+<td><a class="reference internal image-reference" href="_images/input-02.png"><img alt="_images/input-02.png" class="align-center" src="_images/input-02.png" style="width: 600px; height: 512px;" />
+</a>
+</td>
+</tr>
+</tbody>
+</table>
+</div><div aria-labelledby="tab-0-0-1" class="sphinx-tabs-panel" hidden="true" id="panel-0-0-1" name="0-1" role="tabpanel" tabindex="0"><table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><a class="reference internal image-reference" href="_images/segmented-01.png"><img alt="_images/segmented-01.png" class="align-center" src="_images/segmented-01.png" style="width: 600px; height: 512px;" />
+</a>
+</td>
+<td><a class="reference internal image-reference" href="_images/segmented-02.png"><img alt="_images/segmented-02.png" class="align-center" src="_images/segmented-02.png" style="width: 600px; height: 512px;" />
+</a>
+</td>
+</tr>
+</tbody>
+</table>
+</div></div>
+</section>
+<section id="workflow-diagram">
+<h2>4. Workflow diagram<a class="headerlink" href="#workflow-diagram" title="Link to this heading"></a></h2>
+<img alt="_images/complete-workflow.png" class="align-center" src="_images/complete-workflow.png" />
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="user_guide.html" class="btn btn-neutral float-left" title="Quick start: A user guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="segmentation_pith.html" class="btn btn-neutral float-right" title="Pith Prediction using UNet" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Thi-Thu-Khiet Dang, Volker Baecker.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
