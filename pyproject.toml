@@ -48,7 +48,10 @@ testing = [
     "pytest-qt",  # https://pytest-qt.readthedocs.io/en/latest/
     "napari",
     "pyqt5",
-    "qtpy"
+    "qtpy",
+    "sphinx_rtd_theme",
+    "myst_parser",
+    "sphinx_tabs"
 ]
 
 [project.entry-points."napari.manifest"]
