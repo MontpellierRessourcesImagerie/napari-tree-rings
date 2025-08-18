@@ -9,7 +9,7 @@ The Napari plugin expects your data to respect a precise format:
    - The plugin only accept images in 2D grayscale (Y, X) or 2D RGB (Y, X, 3).
    - In the case of running batch, all the images that you want to process must be in the same folder.
    - Avoid using special characters in the folder's name. (Tips: `Doranum <https://doranum.fr/stockage-archivage/comment-nommer-fichiers_10_13143_wgqw-aa59/>`_)
-   - Both models used by this plugin were trained on images with the size ranging from 2000x2000 to 10000x10000, you may have troubles if your images out of this size.
+   - Both models used by this plugin were trained on images with the size ranging from 2000x2000 to 10000x10000 pixels, you may have troubles if your images out of this size.
 
 .. code-block:: bash
 
@@ -50,15 +50,13 @@ b. Segment the tree rings (Segmentation)
 |               +--------------------+-------------------------------------------------------------------------------------------------------------+
 |               | Pith model         | Choose model for segmenting pith.                                                                           |
 |               +--------------------+-------------------------------------------------------------------------------------------------------------+
-|               | Patch size         | image will be cropped into smaller patches to ensure computational cost. The default is 256, since it is the|
+|               | Patch size         | Image will be cropped into smaller patches to ensure computational cost. The default is 256, since it is the|
 |               |                    | size we used to train our models.                                                                           |
 |               +--------------------+-------------------------------------------------------------------------------------------------------------+
-|               | Overlap            | the proportion of length shared between adjacent image tiles to ensure smooth transitions and avoid edge    |
+|               | Overlap            | The proportion of length shared between adjacent image tiles to ensure smooth transitions and avoid edge    |
 |               |                    | artifacts. The default is 60.                                                                               |
 |               +--------------------+-------------------------------------------------------------------------------------------------------------+
 |               | Batch size         | The number of tiles processed together in a single iteration. The default is 8.                             |
-|               +--------------------+-------------------------------------------------------------------------------------------------------------+
-|               | Thickness          | The thickness of output ring boundaries.                                                                    |
 |               +--------------------+-------------------------------------------------------------------------------------------------------------+
 |               | Rescale Factor     | Controls how much your image is scaled down before post-processing (default is 5).                          |
 |               +--------------------+-------------------------------------------------------------------------------------------------------------+
@@ -78,7 +76,7 @@ C. Extract measures (Measures)
 - For running batch, each image will have three exported CSV files:
    - {imageName}.csv: containing the coordinates of bark boundary
    - {imageName}_rings.csv: containing the coordinates of ring and pith boundaries.
-   - {imageName}_table.csv: containing the necessary measuremnts.
+   - {imageName}_table.csv: containing the necessary measurements.
 
 3. Examples of processed data
 =============================

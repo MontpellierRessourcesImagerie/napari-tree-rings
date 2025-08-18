@@ -29,7 +29,7 @@ Quick start: A user guide
 - Napari is only required if you want to use tree-ring-analyzer with a graphical interface.
 - Napari is not part of tree-ring-analyzer's dependencies, so you will have to install it separately.
 - Each of the commands below is supposed to be run after you activated your virtual environment.
-- If the install was successful, you should see the plugin in Napari in the top bar menu: Plugins > Segment Trunk (Napari Tree Rings).
+- If the installation is successful, you will see the plugin in Napari in the top bar menu: Plugins > Segment Trunk (Napari Tree Rings).
 
 A. Development versions
 -----------------------
@@ -41,8 +41,8 @@ A. Development versions
 +-----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | GitHub                | :code:`pip install git+https://github.com/MontpellierRessourcesImagerie/tree-ring-analyzer.git`.                                                                                         |
 +-----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| From an archive       | - Download `the archive <https://github.com/MontpellierRessourcesImagerie/tree-ring-analyzer/archive/refs/heads/main.zip>`_  :code:`pyproject.toml` and launch :code:`pip install -e .`. |
-|                       | - From the terminal containing your virtual env, move to the folder containing the file :code:`pyproject.toml`                                                                           |
+| From an archive       | - Download `the archive <https://github.com/MontpellierRessourcesImagerie/tree-ring-analyzer/archive/refs/heads/main.zip>`_  :code:`pyproject.toml`.                                     |
+|                       | - From the terminal containing your virtual env, move to the folder containing the file :code:`pyproject.toml`.                                                                          |
 |                       | - Run the command :code:`pip install -e .`                                                                                                                                               |
 +-----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 

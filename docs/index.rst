@@ -12,4 +12,5 @@ Napari Tree Rings
 
    user_guide
    segmentation_pith
+   segmentation_rings
    measure
