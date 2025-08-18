@@ -26,17 +26,17 @@ Users can export the segmentation findings and estimate bark, ring borders, and 
 - Run button on the Segment Rings tag: find the rings in just one image.
 - Run Batch button on the Batch Segment Trunk tag: runs all the images in the folder. 
 
-Users can also modify certain parameters, including the batch size or the expected ring thickness (in pixels). The interface's goal is to assist biologists without having programming expertise by being user-friendly.
+Users can also modify certain parameters, including the batch size. The interface's goal is to assist biologists without having programming expertise by being user-friendly.
 
 If accessible, the unit of micrometres will be used to determine the parameters; if not, pixels will be used. The calculated parameters are made up of:
-- bbox: The bounding box's minimum and maximum coordinates on the horizontal and vertical axes make up the calculated parameters.
-- area: region's area.
-- area_convex: area, which is the smallest convex polygon enclosing the region, of the convex hull image.
-- axis_major_length: length of the ring borders' main axis
-- axis_minor_length: length of the ring borders' minor axis
-- eccentricity: The eccentricity, which ranges from 0 to 1, is the focal distance divided by the major axis length. When the maximum Feret's diameter, which is the largest distance between points across the convex hull, is zero, the region becomes a circle.
-- orientation: angle, measured in radians and ranging from $-pi/2$ to $pi/2$ anticlockwise, between the main axis and the vertical axis.
-- area_growth: the area between the two ring boundaries that experiences growth over the course of a year.
+- bbox: The bounding box’s minimum and maximum coordinates on the horizontal and vertical axes.
+- area: Region’s area.
+- area_convex: Area of the convex hull image, which is the smallest convex polygon enclosing the region.
+- axis_major_length: Length of the ring boundaries’ major axis.
+- axis_minor_length: Length of the ring boundaries’ minor axis.
+- eccentricity: The eccentricity, which ranges from 0 to 1, is the focal distance divided by the major axis length. When the eccentricity is zero, the region becomes a circle.
+- orientation: Angle between the major axis and the vertical axis, measured in radians and ranging from -pi/2 to pi/2 anticlockwise.
+- area_growth: The area between the two ring boundaries that experiences growth over a year (except the cases of pith and bark).
 
 ## Installation
 

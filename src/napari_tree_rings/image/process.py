@@ -127,7 +127,7 @@ class RingsSegmenter(Segmenter):
         self.loadPithModels()
         self.loadRingsModels()
         self.options = {'pithModel': self.pithModels[0], 'ringsModel': self.ringsModels[0], 'patchSize': 256,
-                        'overlap': 60, 'batchSize': 8, 'thickness': 1, 'resize': 5, 'lossType': 'H0'}
+                        'overlap': 60, 'batchSize': 8, 'resize': 5, 'lossType': 'H0'}
         self.loadOptions()
         self.resultsLayer = None
         self.minRadiusDeltaPithInnerRing = 3
@@ -149,7 +149,6 @@ class RingsSegmenter(Segmenter):
         segmentation.patchSize = self.options['patchSize']
         segmentation.overlap = self.options['overlap']
         segmentation.batchSize = self.options['batchSize']
-        segmentation.thickness = self.options['thickness']
         segmentation.lossType = self.options['lossType']
         segmentation.resize = self.options['resize']
         segmentation.segmentImage(self.ringsModel, self.pithModel, image)

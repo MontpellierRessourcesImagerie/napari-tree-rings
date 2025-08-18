@@ -497,10 +497,6 @@ class SegmentRingsOptionsWidget(QWidget):
                                                                       self.options['batchSize'],
                                                                       self.fieldWidth,
                                                                       self.batchSizeChanged)
-        thicknessLabel, self.thicknessInput = WidgetTool.getLineInput(self, "Thickness: ",
-                                                                      self.options['thickness'],
-                                                                      self.fieldWidth,
-                                                                      self.thicknessChanged)
         resizeLabel, self.resizeInput = WidgetTool.getLineInput(self, "Rescale Factor: ",
                                                                       self.options['resize'],
                                                                       self.fieldWidth,
@@ -527,7 +523,6 @@ class SegmentRingsOptionsWidget(QWidget):
         formLayout.addRow(patchSizeLabel, self.patchSizeInput)
         formLayout.addRow(overlapLabel, self.overlapInput)
         formLayout.addRow(batchSizeLabel, self.batchSizeInput)
-        formLayout.addRow(thicknessLabel, self.thicknessInput)
         formLayout.addRow(resizeLabel, self.resizeInput)
         formLayout.addRow(lossTypeLabel, self.lossTypeCombo)
         mainLayout.addLayout(formLayout)
@@ -545,10 +540,6 @@ class SegmentRingsOptionsWidget(QWidget):
 
 
     def batchSizeChanged(self):
-        pass
-
-
-    def thicknessChanged(self):
         pass
 
 
@@ -581,6 +572,5 @@ class SegmentRingsOptionsWidget(QWidget):
         self.segmentRings.options["patchSize"] = int(self.patchSizeInput.text().strip())
         self.segmentRings.options["overlap"] = int(self.overlapInput.text().strip())
         self.segmentRings.options["batchSize"] = int(self.batchSizeInput.text().strip())
-        self.segmentRings.options["thickness"] = int(self.thicknessInput.text().strip())
         self.segmentRings.options["resize"] = int(self.resizeInput.text().strip())
         self.segmentRings.options["lossType"] = self.lossTypeCombo.currentText().strip()
