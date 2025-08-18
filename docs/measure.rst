@@ -26,5 +26,5 @@ Measures on Tree Rings
 +-------------------+----------------------------------------------------------------------------------------------------------------------------------------+
 | orientation       | Angle between the major axis and the vertical axis, measured in radians and ranging from -pi/2 to pi/2 anticlockwise.                  |
 +-------------------+----------------------------------------------------------------------------------------------------------------------------------------+
-| area_growth       | The area between the two ring boundaries that experiences growth over a year (except the cases of pith and bark).                       |
+| area_growth       | The area between the two ring boundaries that experiences growth over a year (except the cases of pith and bark).                      |
 +-------------------+----------------------------------------------------------------------------------------------------------------------------------------+
