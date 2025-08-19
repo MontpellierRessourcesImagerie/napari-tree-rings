@@ -6,10 +6,11 @@ name: tests
 on:
   push:
     branches:
-      - main
-      - npe2
+      - gh-pages
     tags:
       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+  release:
+    types: [created] 
   pull_request:
     branches:
       - main

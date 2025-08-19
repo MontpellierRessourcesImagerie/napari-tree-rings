@@ -51,7 +51,8 @@ testing = [
     "qtpy",
     "sphinx_rtd_theme",
     "myst_parser",
-    "sphinx_tabs"
+    "sphinx_tabs",
+    "sphinx"
 ]
 
 [project.entry-points."napari.manifest"]
