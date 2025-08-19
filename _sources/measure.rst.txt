@@ -28,3 +28,5 @@ Measures on Tree Rings
 +-------------------+----------------------------------------------------------------------------------------------------------------------------------------+
 | area_growth       | The area between the two ring boundaries that experiences growth over a year (except the cases of pith and bark).                      |
 +-------------------+----------------------------------------------------------------------------------------------------------------------------------------+
+
+- If you would like to add other measurements while running batch, you can modify `BatchSegmentTrunk.run` in the src/napari_tree_rings/image/process.py. There is an example of `area_growth` for you to see and refer to.
