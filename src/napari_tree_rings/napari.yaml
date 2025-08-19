@@ -2,6 +2,23 @@ name: napari-tree-rings
 display_name: Napari Tree Rings
 # use 'hidden' to remove plugin from napari hub search results
 visibility: public
+summary: >
+  A tool to delineate bark, pith, and xylem annual rings and measure their properties
+  on circular sections of tree trunks.
+authors:
+  - name: Volker Baecker
+    email: volker.baecker@mri.cnrs.fr
+  - name: Thi-Thu-Khiet Dang
+    email: dangthithukhiet7988@gmail.com
+documentation:
+  # Option 1: link to your full Sphinx docs on GitHub Pages
+  url: https://montpellierressourcesimagerie.github.io/napari-tree-rings/
+
+  # Option 2: or point to the local docs folder (unbuilt source)
+  # local: docs
+
+# Optional: link to your source repository
+source_url: https://github.com/MontpellierRessourcesImagerie/napari-tree-rings
 # see https://napari.org/stable/plugins/technical_references/manifest.html#fields for valid categories
 categories: ["Annotation", "Segmentation", "Acquisition"]
 contributions:
