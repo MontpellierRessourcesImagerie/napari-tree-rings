@@ -28,7 +28,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install .[test]
+          pip install .[docs]
             # if you declared docs extras in pyproject.toml
           # or: pip install -r docs/requirements.txt
 
