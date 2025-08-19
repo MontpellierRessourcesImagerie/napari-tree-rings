@@ -9,6 +9,8 @@ on:
       - main
     paths:
       - "docs/**"
+      - ".github/workflows/test_and_deploy.yml"
+      - "pyproject.toml"
   release:
     types: [created] 
 
@@ -26,7 +28,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install .[docs]  # if you declared docs extras in pyproject.toml
+          pip install .[test]
+            # if you declared docs extras in pyproject.toml
           # or: pip install -r docs/requirements.txt
 
       - name: Build docs

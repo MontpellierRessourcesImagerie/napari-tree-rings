@@ -48,12 +48,13 @@ testing = [
     "pytest-qt",  # https://pytest-qt.readthedocs.io/en/latest/
     "napari",
     "pyqt5",
-    "qtpy",
-    "sphinx_rtd_theme",
+    "qtpy"
+]
+
+docs = [    "sphinx_rtd_theme",
     "myst_parser",
     "sphinx_tabs",
-    "sphinx"
-]
+    "sphinx"]
 
 [project.entry-points."napari.manifest"]
 napari-tree-rings = "napari_tree_rings:napari.yaml"
