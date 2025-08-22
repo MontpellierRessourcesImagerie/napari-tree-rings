@@ -10,7 +10,6 @@ on:
     paths:
       - "docs/**"
       - ".github/workflows/test_and_deploy.yml"
-      - "pyproject.toml"
   release:
     types: [created] 
 

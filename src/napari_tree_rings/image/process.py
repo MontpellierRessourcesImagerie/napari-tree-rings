@@ -16,10 +16,11 @@ from napari.layers import Image, Layer, Labels, Shapes
 from napari_tree_rings.image.segmentation import SegmentTrunk
 from napari_tree_rings.image.file_util import TiffFileTags
 from napari_tree_rings.image.measure import MeasureShape, TableTool
+import torch.package
 from tree_ring_analyzer.segmentation import TreeRingSegmentation
 import tensorflow as tf
 from napari.qt.threading import create_worker
-
+import torch
 
 
 class Segmenter(object):
@@ -120,55 +121,79 @@ class RingsSegmenter(Segmenter):
         self.modelsPath = os.path.join(self.dataFolder, "models")
         self.pithModelsPath = os.path.join(self.modelsPath, "pith")
         self.ringsModelsPath = os.path.join(self.modelsPath, "rings")
+        self.inbdModelsPath = os.path.join(self.modelsPath, "inbd")
         os.makedirs( self.pithModelsPath, exist_ok=True )
         os.makedirs( self.ringsModelsPath, exist_ok=True)
-        self.pithModels = []
-        self.ringsModels = []
-        self.loadPithModels()
-        self.loadRingsModels()
-        self.options = {'pithModel': self.pithModels[0], 'ringsModel': self.ringsModels[0], 'patchSize': 256,
-                        'overlap': 60, 'batchSize': 8, 'resize': 5, 'lossType': 'H0'}
+        os.makedirs( self.inbdModelsPath, exist_ok=True)
+        self.pithModels = self.loadModels(self.pithModelsPath, 'pith')
+        self.ringsModels = self.loadModels(self.ringsModelsPath, 'rings')
+        self.inbdModels = self.loadModels(self.inbdModelsPath, 'inbd')
+
+        self.options = {'method': 'Attention UNet', 'pithModel': self.pithModels[0], 'ringsModel': self.ringsModels[0], 'patchSize': 256,
+                        'overlap': 60, 'batchSize': 8, 'resize': 5, 'lossType': 'H0', 'inbdModel': self.inbdModels[0]}
         self.loadOptions()
         self.resultsLayer = None
         self.minRadiusDeltaPithInnerRing = 3
 
-        self.ringsModel = tf.keras.models.load_model(os.path.join(self.ringsModelsPath, self.options['ringsModel']), compile=False)
-        self.pithModel = tf.keras.models.load_model(os.path.join(self.pithModelsPath, self.options['pithModel']), compile=False)
-        self.channel = self.pithModel.get_config()['layers'][0]['config']['batch_shape'][-1]
+        self.ringsModel = None
+        self.pithModel = None
+        self.inbdModel = None
 
 
     def segment(self):
         self.loadOptions()
-        image = self.layer.data
+        if self.options['method'] == 'Attention UNet':
+            if self.ringsModel is None:
+                self.inbdModel = None
+                self.ringsModel = tf.keras.models.load_model(os.path.join(self.ringsModelsPath, self.options['ringsModel']), compile=False)
+                self.pithModel = tf.keras.models.load_model(os.path.join(self.pithModelsPath, self.options['pithModel']), compile=False)
+                self.channel = self.pithModel.get_config()['layers'][0]['config']['batch_shape'][-1]
+            
+            image = self.layer.data
+            
+            if len(image.shape) == 2:
+                image = image[:, :, None]
+            if self.channel == 1 and image.shape[-1] == 3:
+                image = (0.299 * image[:, :, 0] + 0.587 * image[:, :, 1] + 0.114 * image[:, :, 2])[:, :, None]
+            segmentation = TreeRingSegmentation()
+            segmentation.patchSize = self.options['patchSize']
+            segmentation.overlap = self.options['overlap']
+            segmentation.batchSize = self.options['batchSize']
+            segmentation.lossType = self.options['lossType']
+            segmentation.resize = self.options['resize']
+            segmentation.segmentImage(self.ringsModel, self.pithModel, image)
+            # rings = self.maskToPolygons(segmentation.maskRings)
+            # pith = self.maskToPolygons(segmentation.pith)
+            # self.removeInnerRing(rings, pith)
+            rings = self.ringToPolygons(segmentation.predictedRings)
+            
+        else:
+            if self.inbdModel is None:
+                self.ringsModel = None
+                self.pithModel = None
+                importer = torch.package.PackageImporter(os.path.join(self.inbdModelsPath, self.options['inbdModel']))
+                self.inbdModel = importer.load_pickle('model', 'model.pkl').eval().requires_grad_(False)
+                if torch.cuda.is_available():
+                    self.inbdModel.cuda()
+
+            output = self.inbdModel.process_image(self.layer.metadata['path'])
+            rings = []
+            for boundary in reversed(output.boundaries):
+                rings.append(list(boundary.boundarypoints * self.inbdModel.scale))
         
-        if len(image.shape) == 2:
-            image = image[:, :, None]
-        if self.channel == 1 and image.shape[-1] == 3:
-            image = (0.299 * image[:, :, 0] + 0.587 * image[:, :, 1] + 0.114 * image[:, :, 2])[:, :, None]
-        segmentation = TreeRingSegmentation()
-        segmentation.patchSize = self.options['patchSize']
-        segmentation.overlap = self.options['overlap']
-        segmentation.batchSize = self.options['batchSize']
-        segmentation.lossType = self.options['lossType']
-        segmentation.resize = self.options['resize']
-        segmentation.segmentImage(self.ringsModel, self.pithModel, image)
-        # rings = self.maskToPolygons(segmentation.maskRings)
-        # pith = self.maskToPolygons(segmentation.pith)
-        # self.removeInnerRing(rings, pith)
-        rings = self.ringToPolygons(segmentation.predictedRings)
         self.resultsLayer = Shapes(rings,
-                                   edge_width=8,
-                                   face_color='white',
-                                   edge_color='red',
-                                   scale=self.layer.scale,
-                                   units=self.layer.units,
-                                   blending='minimum',
-                                   shape_type='polygon')
+                                    edge_width=8,
+                                    face_color='white',
+                                    edge_color='red',
+                                    scale=self.layer.scale,
+                                    units=self.layer.units,
+                                    blending='minimum',
+                                    shape_type='polygon')
         self.resultsLayer.metadata['parent'] = self.layer
         self.resultsLayer.metadata['parent_path'] = self.layer.metadata['path']
         self.resultsLayer.name = 'pith and rings of ' + self.layer.name
 
-
+            
     def removeInnerRing(self, ringPolygons, pithPolygons):
         innerRingShapeList = Shapes([ringPolygons[-1]], shape_type='polygon')
         pithShapeList = Shapes(pithPolygons, shape_type='polygon')
@@ -232,64 +257,25 @@ class RingsSegmenter(Segmenter):
             self.measurements['label'][-1] = label
 
 
-    def pithModelsExist(self):
-       return self.modelsExists(self.pithModelsPath)
-
-
-    def ringsModelsExists(self):
-        return self.modelsExists(self.ringsModelsPath)
-
-
-    @classmethod
-    def modelsExists(cls, path):
-        if not os.path.exists(path):
-            return False
-        models = [model for model in os.listdir(path) if model.endswith('.keras')]
-        return len(models) > 0
-
-
-    def loadPithModels(self):
-        self.pithModels = self.getKerasModelsFromFolder(self.pithModelsPath)
-        if len(self.pithModels) == 0:
-            self.downloadPithModels()
-        self.pithModels = self.getKerasModelsFromFolder(self.pithModelsPath)
-
-
-    def loadRingsModels(self):
-        self.ringsModels = self.getKerasModelsFromFolder(self.ringsModelsPath)
-        if len(self.ringsModels) == 0:
-            self.downloadRingsModels()
-        self.ringsModels = self.getKerasModelsFromFolder(self.ringsModelsPath)
-
-
-    def getKerasModelsFromFolder(self, folder):
-        if not self.modelsExists(folder):
-            return []
-        models = [model for model in os.listdir(folder) if model.endswith('.keras')]
-        return models
-
-
-    def downloadPithModels(self):
-        self.downloadModels('pith')
-
-
-    def downloadRingsModels(self):
-        self.downloadModels('rings')
-
-
-    def downloadModels(self, typeKey):
-        path = os.path.join(str(self.getProjectRoot()), "model_urls.json")
-        with open(path) as aFile:
+    def loadModels(self, pathModel, typeKey):
+        path_url = os.path.join(str(self.getProjectRoot()), "model_urls.json")
+        with open(path_url) as aFile:
             paths = json.load(aFile)
         model = paths[typeKey]
+        format = '.pt.zip' if typeKey == 'inbd' else '.keras'
+        models = []
         for key, url in model.items():
-            filename = key + ".keras"
-            destPath = os.path.join(self.ringsModelsPath, filename)
-            if typeKey == "pith":
-                destPath = os.path.join(self.pithModelsPath, filename)
-            print(url, destPath)
-            outPath, msg = urlretrieve(url, destPath)
-            print("downloaded ", outPath, msg)
+            filename = key + format
+            destPath = os.path.join(pathModel, filename)
+            if os.path.exists(destPath):
+                models.append(filename)
+            else:
+                print(url, destPath)
+                outPath, msg = urlretrieve(url, destPath)
+                print("downloaded ", outPath, msg)
+                models.append(filename)
+
+        return models
 
 
     @classmethod

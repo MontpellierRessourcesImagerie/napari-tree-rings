@@ -254,7 +254,8 @@ class SegmentTrunkWidget(QWidget):
     def onSegmentationFinished(self):
         self.viewer.scale_bar.unit = self.segmenter.tiffFileTags.unit
         self.addTrunkSegmentationToViewer(self.segmenter.shapeLayer)
-        self.tableDockWidget.close()
+        if self.tableDockWidget is not None:
+            self.tableDockWidget.close()
         self.measurements = self.segmenter.measurements
         self.table = TableView(self.measurements)
         self.table.saveData(self.outputRingFolder)
@@ -267,7 +268,8 @@ class SegmentTrunkWidget(QWidget):
     def onRingsSegmentationFinished(self):
         self.viewer.scale_bar.unit = self.ringsSegmenter.tiffFileTags.unit
         self.viewer.add_layer(self.ringsSegmenter.resultsLayer)
-        self.tableDockWidget.close()
+        if self.tableDockWidget is not None:
+            self.tableDockWidget.close()
         self.measurements = self.ringsSegmenter.measurements
         self.table = TableView(self.measurements)
         # self.table.saveData(self.outputRingFolder)
@@ -478,6 +480,11 @@ class SegmentRingsOptionsWidget(QWidget):
 
 
     def createLayout(self):
+        methodLabel, self.methodCombo = WidgetTool.getComboInput(self,
+                                                                    "Method: ",
+                                                                    ['Attention UNet', 'INBD'])
+        self.methodCombo.currentTextChanged.connect(self.changeMethod)
+        
         ringsModelLabel, self.ringsModelCombo = WidgetTool.getComboInput(self,
                                                                         "Ring model: ",
                                                                         self.segmentRings.ringsModels)
@@ -515,20 +522,41 @@ class SegmentRingsOptionsWidget(QWidget):
         buttonsLayout.addWidget(saveButton)
         buttonsLayout.addWidget(saveAndCloseButton)
         buttonsLayout.addWidget(cancelAndCloseButton)
-        mainLayout = QVBoxLayout()
-        formLayout = QFormLayout()
-        formLayout.setLabelAlignment(Qt.AlignRight)
-        formLayout.addRow(ringsModelLabel, self.ringsModelCombo)
-        formLayout.addRow(pithModelLabel, self.pithModelCombo)
-        formLayout.addRow(patchSizeLabel, self.patchSizeInput)
-        formLayout.addRow(overlapLabel, self.overlapInput)
-        formLayout.addRow(batchSizeLabel, self.batchSizeInput)
-        formLayout.addRow(resizeLabel, self.resizeInput)
-        formLayout.addRow(lossTypeLabel, self.lossTypeCombo)
-        mainLayout.addLayout(formLayout)
-        mainLayout.addLayout(buttonsLayout)
-        self.setLayout(mainLayout)
+        self.mainLayout = QVBoxLayout()
+        self.formLayout = QFormLayout()
+        methodLayout = QFormLayout()
 
+        self.formLayout.setLabelAlignment(Qt.AlignRight)
+        self.formLayout.addRow(ringsModelLabel, self.ringsModelCombo)
+        self.formLayout.addRow(pithModelLabel, self.pithModelCombo)
+        self.formLayout.addRow(patchSizeLabel, self.patchSizeInput)
+        self.formLayout.addRow(overlapLabel, self.overlapInput)
+        self.formLayout.addRow(batchSizeLabel, self.batchSizeInput)
+        self.formLayout.addRow(resizeLabel, self.resizeInput)
+        self.formLayout.addRow(lossTypeLabel, self.lossTypeCombo)
+
+        methodLayout.setLabelAlignment(Qt.AlignRight)
+        methodLayout.addRow(methodLabel, self.methodCombo)
+
+        self.mainLayout.addLayout(methodLayout)
+        self.mainLayout.addLayout(self.formLayout)
+        self.mainLayout.addLayout(buttonsLayout)
+        self.setLayout(self.mainLayout)
+
+
+    def set_layout_visible(self, layout, visible=True):
+        for i in range(layout.count()):
+            item = layout.itemAt(i)
+            widget = item.widget()
+            if widget:
+                widget.setVisible(visible)
+
+
+    def changeMethod(self):
+        if self.methodCombo.currentText().strip() == "INBD":
+            self.set_layout_visible(self.formLayout, False)
+        else:
+            self.set_layout_visible(self.formLayout, True)
 
 
     def patchSizeChanged(self):
@@ -569,6 +597,9 @@ class SegmentRingsOptionsWidget(QWidget):
 
 
     def setOptionsFromDialog(self):
+        self.segmentRings.options["method"] = self.methodCombo.currentText().strip()
+        self.segmentRings.options["ringsModel"] = self.ringsModelCombo.currentText().strip()
+        self.segmentRings.options["pithModel"] = self.pithModelCombo.currentText().strip()
         self.segmentRings.options["patchSize"] = int(self.patchSizeInput.text().strip())
         self.segmentRings.options["overlap"] = int(self.overlapInput.text().strip())
         self.segmentRings.options["batchSize"] = int(self.batchSizeInput.text().strip())

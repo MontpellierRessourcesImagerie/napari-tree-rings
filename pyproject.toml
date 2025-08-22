@@ -39,7 +39,9 @@ dependencies = [
     "shapelysmooth",
     "imagej",
     "napari-imagej",
-    "scikit-learn"
+    "scikit-learn",
+    "torch",
+    "torchvision"
 ]
 
 [project.optional-dependencies]
@@ -50,7 +52,8 @@ testing = [
     "pytest-qt",  # https://pytest-qt.readthedocs.io/en/latest/
     "napari",
     "pyqt5",
-    "qtpy"
+    "qtpy",
+    "tree-ring-analyzer"
 ]
 
 docs = [    "sphinx_rtd_theme",
