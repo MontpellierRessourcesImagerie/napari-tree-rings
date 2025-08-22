@@ -178,9 +178,25 @@ artifacts. The default is 60.</p></td>
 </table>
 <ul class="simple">
 <li><p>You have to click the <code class="code docutils literal notranslate"><span class="pre">Save</span></code> button to save the new configurations.</p></li>
-<li><p>For running only one image, you can choose the output folder (to export CSV file) by pressing the <code class="code docutils literal notranslate"><span class="pre">Browse</span></code> button at the <code class="code docutils literal notranslate"><span class="pre">Output</span></code> in the <code class="code docutils literal notranslate"><span class="pre">Segment</span> <span class="pre">Rings</span></code> tag.</p></li>
-<li><p>For running batch, press the <code class="code docutils literal notranslate"><span class="pre">Browse</span></code> button at the <code class="code docutils literal notranslate"><span class="pre">Output</span></code> in the <code class="code docutils literal notranslate"><span class="pre">Batch</span> <span class="pre">Segment</span> <span class="pre">Trunk</span></code> tag.</p></li>
-<li><p>You can just click the <code class="code docutils literal notranslate"><span class="pre">Run</span></code> button in <code class="code docutils literal notranslate"><span class="pre">Segment</span> <span class="pre">Rings</span></code> tag to start the segmentation on one image, or <code class="code docutils literal notranslate"><span class="pre">Run</span> <span class="pre">Batch</span></code> button in <code class="code docutils literal notranslate"><span class="pre">Batch</span> <span class="pre">Segment</span> <span class="pre">Trunk</span></code> tag to start the batch segmentation.</p></li>
+<li><dl class="simple">
+<dt>For running only one image:</dt><dd><ul>
+<li><p>You can choose the output folder (to export CSV file) by pressing the <code class="code docutils literal notranslate"><span class="pre">Browse</span></code> button at the <code class="code docutils literal notranslate"><span class="pre">Output</span></code> in the <code class="code docutils literal notranslate"><span class="pre">Segment</span> <span class="pre">Rings</span></code> tag.</p></li>
+<li><p>You can just click the <code class="code docutils literal notranslate"><span class="pre">Run</span></code> button in <code class="code docutils literal notranslate"><span class="pre">Segment</span> <span class="pre">Rings</span></code> tag to start the segmentation.</p></li>
+<li><p>The segmentation result will overlay on the original image.</p></li>
+<li><p>The extracted measures will appear in the lower-left box, and automatically saved in the chosen output folder.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>For running batch:</dt><dd><ul>
+<li><p>Press the <code class="code docutils literal notranslate"><span class="pre">Browse</span></code> button at the <code class="code docutils literal notranslate"><span class="pre">Output</span></code> in the <code class="code docutils literal notranslate"><span class="pre">Batch</span> <span class="pre">Segment</span> <span class="pre">Trunk</span></code> tag.</p></li>
+<li><p>You can just click the <code class="code docutils literal notranslate"><span class="pre">Run</span> <span class="pre">Batch</span></code> button in <code class="code docutils literal notranslate"><span class="pre">Batch</span> <span class="pre">Segment</span> <span class="pre">Trunk</span></code> tag to start the batch segmentation.</p></li>
+<li><p>The extracted measures will automatically saved in the chosen output folder, along with the coordinates of the detected boundary points.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
 <li><p>The first time, the models will have to be downloaded from internet.</p></li>
 </ul>
 </section>

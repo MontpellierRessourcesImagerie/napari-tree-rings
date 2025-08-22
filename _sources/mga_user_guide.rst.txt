@@ -64,9 +64,15 @@ b. Segment the tree rings (Segmentation)
 +---------------+--------------------+-------------------------------------------------------------------------------------------------------------+
 
 - You have to click the :code:`Save` button to save the new configurations.
-- For running only one image, you can choose the output folder (to export CSV file) by pressing the :code:`Browse` button at the :code:`Output` in the :code:`Segment Rings` tag.
-- For running batch, press the :code:`Browse` button at the :code:`Output` in the :code:`Batch Segment Trunk` tag.
-- You can just click the :code:`Run` button in :code:`Segment Rings` tag to start the segmentation on one image, or :code:`Run Batch` button in :code:`Batch Segment Trunk` tag to start the batch segmentation.
+- For running only one image:
+      - You can choose the output folder (to export CSV file) by pressing the :code:`Browse` button at the :code:`Output` in the :code:`Segment Rings` tag.
+      - You can just click the :code:`Run` button in :code:`Segment Rings` tag to start the segmentation.
+      - The segmentation result will overlay on the original image.
+      - The extracted measures will appear in the lower-left box, and automatically saved in the chosen output folder.
+- For running batch:
+      - Press the :code:`Browse` button at the :code:`Output` in the :code:`Batch Segment Trunk` tag.
+      - You can just click the :code:`Run Batch` button in :code:`Batch Segment Trunk` tag to start the batch segmentation.
+      - The extracted measures will automatically saved in the chosen output folder, along with the coordinates of the detected boundary points.
 - The first time, the models will have to be downloaded from internet.
 
 C. Extract measures (Measures)
