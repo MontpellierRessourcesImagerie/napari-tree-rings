@@ -41,7 +41,8 @@ dependencies = [
     "napari-imagej",
     "scikit-learn",
     "torch",
-    "torchvision"
+    "torchvision",
+    "matplotlib"
 ]
 
 [project.optional-dependencies]
@@ -53,7 +54,8 @@ testing = [
     "napari",
     "pyqt5",
     "qtpy",
-    "tree-ring-analyzer"
+    "tree-ring-analyzer",
+    "matplotlib"
 ]
 
 docs = [    "sphinx_rtd_theme",

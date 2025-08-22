@@ -23,3 +23,4 @@ def test_load_tiff_image(make_napari_viewer, tmp_path):
     # Check that the viewer now has 1 layer
     assert len(viewer.layers) == 1
     assert viewer.layers[0].data.shape == (50, 50)
+
