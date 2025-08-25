@@ -39,7 +39,6 @@ def test_segment_trunk_widget(make_napari_viewer, tmp_path):
     my_widget.runBatchButtonClicked()
 
     # read captured output and check that it's as we expected
-    print(my_widget.measurements, 'gaugau')
     assert my_widget is not None
 
 

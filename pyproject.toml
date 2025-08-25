@@ -69,9 +69,6 @@ testing = [
     "tifffile",
     "tensorflow==2.17.0",
     "python-polylabel",
-    "codecov",
-    "setuptools",
-    "tox-gh-actions",
     "scikit-learn"
 ]
 

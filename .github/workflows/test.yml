@@ -39,7 +39,8 @@ jobs:
       # tox-conda: https://github.com/tox-dev/tox-conda
       - name: Install dependencies
         run: |
-          pip install .[testing]
+          python -m pip install --upgrade pip
+          python -m pip install setuptools tox tox-gh-actions
 
       # this runs the platform-specific tests declared in tox.ini
       - name: Test with tox
