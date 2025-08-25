@@ -61,4 +61,3 @@ def test_segment_trunk_options(make_napari_viewer):
     my_widget.saveOptionsButtonPressed()
 
     assert my_widget is not None
-    
