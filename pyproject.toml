@@ -57,7 +57,7 @@ testing = [
     "pytest-cov",  # https://pytest-cov.readthedocs.io/en/latest/
     "pytest-qt",  # https://pytest-qt.readthedocs.io/en/latest/
     "napari",
-    "pyqt5",
+    "pyqt5==5.15",
     "qtpy",
     "tree-ring-analyzer",
     "matplotlib",
