@@ -127,10 +127,12 @@ class RingsSegmenter(Segmenter):
         os.makedirs( self.inbdModelsPath, exist_ok=True)
         self.pithModels = self.loadModels(self.pithModelsPath, 'pith')
         self.ringsModels = self.loadModels(self.ringsModelsPath, 'rings')
-        self.inbdModels = self.loadModels(self.inbdModelsPath, 'inbd')
+        # self.inbdModels = self.loadModels(self.inbdModelsPath, 'inbd')
 
         self.options = {'method': 'Attention UNet', 'pithModel': self.pithModels[0], 'ringsModel': self.ringsModels[0], 'patchSize': 256,
-                        'overlap': 60, 'batchSize': 8, 'resize': 5, 'lossType': 'H0', 'inbdModel': self.inbdModels[0]}
+                        'overlap': 60, 'batchSize': 8, 'resize': 5, 'lossType': 'H0',
+                        #   'inbdModel': self.inbdModels[0]
+                          }
         self.loadOptions()
         self.resultsLayer = None
         self.minRadiusDeltaPithInnerRing = 3

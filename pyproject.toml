@@ -42,7 +42,12 @@ dependencies = [
     "scikit-learn",
     "torch",
     "torchvision",
-    "matplotlib"
+    "matplotlib",
+    "opencv-python-headless",
+    "pint",
+    "tifffile",
+    "tensorflow==2.17.0",
+    "python-polylabel"
 ]
 
 [project.optional-dependencies]
@@ -55,7 +60,19 @@ testing = [
     "pyqt5",
     "qtpy",
     "tree-ring-analyzer",
-    "matplotlib"
+    "matplotlib",
+    "brightest-path-lib",
+    "numpy",
+    "scikit-image",
+    "opencv-python-headless",
+    "pint",
+    "tifffile",
+    "tensorflow==2.17.0",
+    "python-polylabel",
+    "codecov",
+    "setuptools",
+    "tox-gh-actions",
+    "scikit-learn"
 ]
 
 docs = [    "sphinx_rtd_theme",
