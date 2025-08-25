@@ -54,8 +54,8 @@ class Segmenter(object):
         self.tiffFileTags.getPixelSizeAndUnit()
         pixelSize = self.tiffFileTags.pixelSize
         unit = self.tiffFileTags.unit
-        self.layer.scale = (pixelSize, pixelSize)
-        self.layer.units = (unit, unit)
+        self.layer.scale = tuple([pixelSize] * self.layer.ndim)
+        self.layer.units = tuple([unit] * self.layer.ndim)
 
 
     def segment(self):
@@ -91,8 +91,8 @@ class TrunkSegmenter(Segmenter):
         self.segmentTrunkOp = SegmentTrunk(self.layer)
         self.segmentTrunkOp.run()
         shapeLayer = self.segmentTrunkOp.result
-        shapeLayer.scale = self.layer.scale
-        shapeLayer.units = self.layer.units
+        shapeLayer.scale = tuple([self.layer.scale[0]] * shapeLayer.ndim)
+        shapeLayer.units = tuple([self.layer.units[0]] * shapeLayer.ndim)
         shapeLayer.metadata['parent'] = self.layer
         shapeLayer.metadata['parent_path'] = self.layer.metadata['path']
         shapeLayer.name = 'trunk of ' + self.layer.name
@@ -320,7 +320,7 @@ class BatchSegmentTrunk:
         self.ringSegmenter = None
 
 
-    def run(self):
+    def runBatch(self):
         """Run the batch trunk segmentation."""
 
         imageFileNames = os.listdir(self.sourceFolder)

@@ -242,7 +242,7 @@ class SegmentTrunkWidget(QWidget):
             return
         # imagePaths = os.listdir(self.sourceFolder)
         self.batchSegmenter = BatchSegmentTrunk(self.sourceFolder, self.outputFolder)
-        worker = create_worker(self.batchSegmenter.run,
+        worker = create_worker(self.batchSegmenter.runBatch,
                                _progress={'desc': 'Batch Segment Trunk'})
         # worker.yielded.connect(self.onTableChanged)
         worker.finished.connect(self.activateButtons)
