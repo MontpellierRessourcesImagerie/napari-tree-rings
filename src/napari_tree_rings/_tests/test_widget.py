@@ -80,4 +80,3 @@ def test_segment_trunk_options(qtbot):
     my_widget.saveOptionsButtonPressed()
 
     assert my_widget is not None
-
