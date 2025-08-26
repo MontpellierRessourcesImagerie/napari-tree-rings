@@ -46,7 +46,10 @@ b. Segment the tree rings (Segmentation)
 |               | Opening radius     | The size (in pixels) of the structuring element used in the opening operation, which removes small objects  |
 |               |                    | and smooths boundaries in the image (default is 96).                                                        |
 +---------------+--------------------+-------------------------------------------------------------------------------------------------------------+
-| Segment Rings | Ring model         | Choose model for segmenting tree ring boundaries.                                                           |
+| Segment Rings |  Method            | Choose framework as Attention UNet or INBD (Gillert et al., 2023). The below configurations are only used   |
+|               |                    | for Attention UNet.                                                                                         |
+|               +--------------------+-------------------------------------------------------------------------------------------------------------+
+|               | Ring model         | Choose model for segmenting tree ring boundaries.                                                           |
 |               +--------------------+-------------------------------------------------------------------------------------------------------------+
 |               | Pith model         | Choose model for segmenting pith.                                                                           |
 |               +--------------------+-------------------------------------------------------------------------------------------------------------+
@@ -112,3 +115,8 @@ C. Extract measures (Measures)
 
 .. image:: _images/complete-workflow.png
    :align: center
+
+5. References
+=============
+
+[1] Gillert, A., Resente, G., Anadon-Rosell, A., Wilmking, M., & Von Lukas, U. F. (2023). Iterative next boundary detection for instance segmentation of tree rings in microscopy images of shrub cross sections. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (pp. 14540-14548).
