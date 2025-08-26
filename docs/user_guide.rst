@@ -10,6 +10,7 @@ Quick start: A user guide
 - The segmentation allows user to segment bark, pith, and annual rings of xylem cells.
 - The measures (exported in CSV files by running batch) include:
     - bbox
+    - perimeter
     - area
     - area_convex
     - axis_major_length
