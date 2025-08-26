@@ -10,22 +10,11 @@ from napari_tree_rings._tests import utils
 import napari
 
 
-os.environ["QT_QPA_PLATFORM"] = "offscreen"
-os.environ["PYVISTA_OFF_SCREEN"] = "true"
-
-if sys.platform.startswith("linux"):
-    os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1"
-
-elif sys.platform.startswith("win"):
-    os.environ["QT_OPENGL"] = "software"
-
-
 
 # capsys is a pytest fixture that captures stdout and stderr output streams
-def test_segment_trunk_widget(qtbot, tmp_path):
+def test_segment_trunk_widget(make_napari_viewer, tmp_path):
     # make viewer and add an image layer using our fixture
-    viewer = napari.Viewer()
-    qtbot.addWidget(viewer.window._qt_window)
+    viewer = make_napari_viewer()
     assert viewer.layers == []
 
     img = utils.make_checkboard((1000, 1000), 1, 'grayscale')
@@ -66,9 +55,8 @@ def test_segment_trunk_widget(qtbot, tmp_path):
 
 #     assert my_widget is not None
 
-def test_segment_ring_options(qtbot):
-    viewer = napari.Viewer()
-    qtbot.addWidget(viewer.window._qt_window)
+def test_segment_ring_options(make_napari_viewer):
+    viewer = make_napari_viewer()
 
     my_widget = SegmentRingsOptionsWidget(viewer)
     
@@ -77,9 +65,8 @@ def test_segment_ring_options(qtbot):
     assert my_widget is not None
 
 
-def test_segment_trunk_options(qtbot):
-    viewer = napari.Viewer()
-    qtbot.addWidget(viewer.window._qt_window)
+def test_segment_trunk_options(make_napari_viewer):
+    viewer = make_napari_viewer()
 
     my_widget = SegmentTrunkOptionsWidget(viewer)
     
