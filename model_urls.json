@@ -8,5 +8,5 @@
     "rings_attention_unet_v0.1": "https://github.com/MontpellierRessourcesImagerie/tree-ring-analyzer/releases/download/v0.1/bigDistance.keras",
     "rings_unet_v0.1.2": "https://github.com/MontpellierRessourcesImagerie/tree-ring-analyzer/releases/download/v0.1.2/bigDisRingAugGrayNormal16.keras"
   },
-  "inbd": {"inbd": "https://github.com/MontpellierRessourcesImagerie/napari-tree-rings/releases/download/v0.1.5/model.pt.zip"}
+  "inbd": {"inbd": "https://github.com/MontpellierRessourcesImagerie/napari-tree-rings/releases/download/v0.1.5/inbd.pt.zip"}
 }

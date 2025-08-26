@@ -1,6 +1,6 @@
 import numpy as np
 import tifffile
-import os
+import os, sys
 from napari_tree_rings._widget import (
     SegmentTrunkWidget,
     SegmentTrunkOptionsWidget,
@@ -8,10 +8,16 @@ from napari_tree_rings._widget import (
 )
 from napari_tree_rings._tests import utils
 import napari
+
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 os.environ["PYVISTA_OFF_SCREEN"] = "true"
-os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1"   # for Linux/macOS
-os.environ["QT_OPENGL"] = "software"        # for Windows/Qt
+
+if sys.platform.startswith("linux"):
+    os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1"
+
+elif sys.platform.startswith("win"):
+    os.environ["QT_OPENGL"] = "software"
 
 
 
