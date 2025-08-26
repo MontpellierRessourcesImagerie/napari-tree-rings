@@ -7,7 +7,6 @@ from napari_tree_rings._widget import (
     SegmentRingsOptionsWidget
 )
 from napari_tree_rings._tests import utils
-import napari
 
 
 
@@ -73,3 +72,4 @@ def test_segment_trunk_options(make_napari_viewer):
     my_widget.saveOptionsButtonPressed()
 
     assert my_widget is not None
+
