@@ -61,30 +61,13 @@ class SegmentTrunkWidget(QWidget):
 
 
     def createLayout(self):
-        # segmentLayout = self.createSegmentTrunkLayout()
         segmentRingsLayout = self.createSegmentRingsLayout()
         batchLayout = self.createBatchProcessingLayout()
         mainLayout = QVBoxLayout()
-        # mainLayout.addLayout(segmentLayout)
         mainLayout.addLayout(segmentRingsLayout)
         mainLayout.addLayout(batchLayout)
         self.setLayout(mainLayout)
 
-
-    def createSegmentTrunkLayout(self):
-        segmentVLayout = QVBoxLayout()
-        segmentLayout = QHBoxLayout()
-        self.runButton = QPushButton("Run")
-        self.runButton.clicked.connect(self.onRunButtonPressed)
-        self.runButton.setEnabled(False)
-        self.segmentTrunkOptionsButton = self.getOptionsButton(self.onOptionsButtonPressed)
-        segmentLayout.addWidget(self.runButton)
-        segmentLayout.addWidget(self.segmentTrunkOptionsButton)
-        segmentTrunkGroupBox = QGroupBox("Segment Trunk")
-        segmentTrunkGroupBox.setLayout(segmentLayout)
-        segmentLayout.setContentsMargins(*self.getGroupBoxMargins())
-        segmentVLayout.addWidget(segmentTrunkGroupBox)
-        return segmentVLayout
 
 
     def createSegmentRingsLayout(self):
@@ -292,11 +275,6 @@ class SegmentTrunkWidget(QWidget):
         self.runBatchButton.setEnabled(False)
         self.segmentRingsOptionsButton.setEnabled(False)
         # self.segmentTrunkOptionsButton.setEnabled(False)
-
-
-    def onOptionsButtonPressed(self):
-        optionsWidget = SegmentTrunkOptionsWidget(self.viewer)
-        self.viewer.window.add_dock_widget(optionsWidget, area='right', name='Options of Segment Trunk ')
 
 
     def onSegmentRingsOptionsButtonPressed(self):
