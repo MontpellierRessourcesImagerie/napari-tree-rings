@@ -27,7 +27,8 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "tree-ring-analyzer",
+    "tree-ring-analyzer@git+https://github.com/MontpellierRessourcesImagerie/tree-ring-analyzer.git",
+#   "tree-ring-analyzer",
     "magicgui",
     "qtpy",
     "appdirs",
@@ -55,7 +56,7 @@ testing = [
     "opencv-python-headless",
     "pint",
     "tifffile",
-    "tensorflow>=2.17.0",
+    "tensorflow==2.17.0",
     "python-polylabel",
     "scikit-learn"
 ]

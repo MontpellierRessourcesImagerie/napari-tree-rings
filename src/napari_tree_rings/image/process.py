@@ -3,24 +3,23 @@ import os
 import cv2
 import appdirs
 import json
+import importlib.resources
 import tifffile as tiff
 import numpy as np
-import datetime
-from pathlib import Path
 import pandas as pd
-from typing import Iterable
 from urllib.request import urlretrieve
 from skimage import measure
 from scipy import ndimage
-from napari.layers import Image, Layer, Labels, Shapes
+from napari.layers import Image, Shapes
 from napari_tree_rings.image.segmentation import SegmentTrunk
 from napari_tree_rings.image.file_util import TiffFileTags
-from napari_tree_rings.image.measure import MeasureShape, TableTool
-import torch.package
+from napari_tree_rings.image.measure import MeasureShape
 from tree_ring_analyzer.segmentation import TreeRingSegmentation
 import tensorflow as tf
-from napari.qt.threading import create_worker
 import torch
+import torch.package
+import napari_tree_rings.config
+
 
 
 class Segmenter(object):
@@ -259,7 +258,7 @@ class RingsSegmenter(Segmenter):
 
 
     def loadModels(self, pathModel, typeKey):
-        path_url = os.path.join(str(self.getProjectRoot()), "model_urls.json")
+        path_url = self.getModelURLsFilePath()
         with open(path_url) as aFile:
             paths = json.load(aFile)
         model = paths[typeKey]
@@ -280,19 +279,11 @@ class RingsSegmenter(Segmenter):
 
 
     @classmethod
-    def getProjectRoot(cls):
-        """
-        Gets the project root directory, assuming this function is called
-        from a file within the project, and that there's a 'pyproject.toml'
-        file at the project root.
-        """
-        # Start from THIS file's directory
-        current_file = Path(__file__).resolve()  # Using resolve to get an absolute path.
-        # Go up directories until we find 'pyproject.toml'
-        for parent in current_file.parents:  # Iterate over every parent.
-            if (parent / "pyproject.toml").exists():  # Checks if file exists
-                return parent
-        raise FileNotFoundError("Project root (with pyproject.toml) not found.")
+    def getModelURLsFilePath(cls):
+        path = ''
+        with importlib.resources.path(napari_tree_rings.config, "model_urls.json") as config_file:
+            path = config_file
+        return path
 
 
     def loadOptions(self):
