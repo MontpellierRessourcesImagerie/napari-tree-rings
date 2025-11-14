@@ -125,9 +125,9 @@ class SegmentTrunk(Operation):
         """Answer the path to the options text file of the segment-trunk command.
         """
         path = appdirs.user_data_dir("napari-tree-rings")
-        if (not os.path.exists(path)):
+        if not os.path.exists(path):
             os.makedirs(path)
-        optionsPath = os.path.join(path, "options.txt")
+        optionsPath = os.path.join(path, "st_options.txt")
         return optionsPath
 
 

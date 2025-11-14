@@ -117,7 +117,7 @@ class RingsSegmenter(Segmenter):
     def __init__(self, layer):
         super().__init__(layer)
         self.dataFolder = appdirs.user_data_dir("napari-tree-rings")
-        self.optionsPath = os.path.join(self.dataFolder, "options.json")
+        self.optionsPath = os.path.join(self.dataFolder, "rs_options.json")
         self.modelsPath = os.path.join(self.dataFolder, "models")
         self.pithModelsPath = os.path.join(self.modelsPath, "pith")
         self.ringsModelsPath = os.path.join(self.modelsPath, "rings")
