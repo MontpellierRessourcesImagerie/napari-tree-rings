@@ -13,7 +13,6 @@ from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QGroupBox, QFileDialog
 from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QFormLayout, QPushButton, QWidget
 from qtpy.QtWidgets import QApplication
-from scyjava import jimport
 from napari.layers import Image
 from napari_tree_rings.progress import IndeterminedProgressThread
 from napari_tree_rings.image.measure import TableTool
@@ -21,7 +20,6 @@ from napari_tree_rings.qtutil import WidgetTool, TableView
 from napari_tree_rings.image.process import TrunkSegmenter
 from napari_tree_rings.image.process import RingsSegmenter
 from napari_tree_rings.image.process import BatchSegmentTrunk
-from napari_tree_rings.image.fiji import FIJI
 from napari_tree_rings.image.segmentation import SegmentTrunk
 
 

@@ -27,27 +27,15 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "brightest-path-lib",
     "tree-ring-analyzer",
-    "numpy",
     "magicgui",
     "qtpy",
-    "scikit-image",
     "appdirs",
-    "scyjava",
     "pyperclip",
     "shapelysmooth",
-    "imagej",
-    "napari-imagej",
-    "scikit-learn",
     "torch>=2.9",
     "torchvision",
-    "matplotlib",
-    "opencv-python-headless",
     "pint",
-    "tifffile",
-    "tensorflow[and-cuda]>=2.20",
-    "python-polylabel"
 ]
 
 [project.optional-dependencies]
