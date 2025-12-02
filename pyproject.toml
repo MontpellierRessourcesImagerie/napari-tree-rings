@@ -26,21 +26,16 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
 requires-python = ">=3.9"
-
-[[tool.pdm.source]]
-type = "index"
-url = "https://download.pytorch.org/whl/cpu/"
-name = "torch"
-
 dependencies = [
-    "torch==2.2.1",
-    "torchvision",
-    "tree-ring-analyzer",
+    "tree-ring-analyzer@git+https://github.com/MontpellierRessourcesImagerie/tree-ring-analyzer.git",
+#   "tree-ring-analyzer",
     "magicgui",
     "qtpy",
     "appdirs",
     "pyperclip",
     "shapelysmooth",
+    "torch>=2.9",
+    "torchvision",
     "pint",
 ]
 
@@ -61,21 +56,11 @@ testing = [
     "opencv-python-headless",
     "pint",
     "tifffile",
+    "tensorflow==2.17.0",
     "python-polylabel",
     "scikit-learn"
 ]
 
-and-cuda = [
-    "torch==2.2.1",
-    "torchvision",
-    "tree-ring-analyzer[and-cuda]",
-    "magicgui",
-    "qtpy",
-    "appdirs",
-    "pyperclip",
-    "shapelysmooth",
-    "pint",
-]
 docs = [    "sphinx_rtd_theme",
     "myst_parser",
     "sphinx_tabs",
