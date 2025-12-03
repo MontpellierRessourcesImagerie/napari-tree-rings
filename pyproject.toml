@@ -3,7 +3,8 @@ name = "napari-tree-rings"
 dynamic = ["version"]
 description = "A tool to delineate bark, pith and xylem annual rings and to measure their property parameters on circular sections of tree trunks."
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
   {name = "Volker Baecker"},
   {email = "volker.baecker@mri.cnrs.fr"},
@@ -11,21 +12,17 @@ authors = [
   {email = "dangthithukhiet7988@gmail.com"},
 ]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Framework :: napari",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "tree-ring-analyzer",
     "magicgui",
@@ -135,5 +132,5 @@ exclude = [
     "*_vendor*",
 ]
 
-target-version = "py38"
+target-version = "py310"
 fix = true
