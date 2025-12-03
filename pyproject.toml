@@ -65,7 +65,11 @@ docs = [    "sphinx_rtd_theme",
 [project.entry-points."napari.manifest"]
 napari-tree-rings = "napari_tree_rings:napari.yaml"
 
-
+[project.urls]
+"Bug Tracker" = "https://github.com/MontpellierRessourcesImagerie/napari-tree-rings/issues"
+"Documentation" = "https://github.com/MontpellierRessourcesImagerie/napari-tree-rings#README.md"
+"Source Code" = "https://github.com/MontpellierRessourcesImagerie/napari-tree-rings"
+"User Support" = "https://github.com/MontpellierRessourcesImagerie/napari-tree-rings/issues"
 
 [build-system]
 requires = ["setuptools>=80", "setuptools-scm[simple]>=8", "wheel"]
