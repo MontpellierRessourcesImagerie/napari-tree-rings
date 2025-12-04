@@ -175,20 +175,6 @@ class SegmentTrunkWidget(QWidget):
         self.runBatchButton.setEnabled(True)
 
 
-    def onRunButtonPressed(self):
-        layer = self.getActiveLayer()
-        if not layer or not type(layer) is Image:
-            return
-        layer.metadata['path'] = layer.source.path
-        self.segmenter = TrunkSegmenter(layer)
-        self.segmenter.measurements = self.measurements
-        worker = create_worker(self.segmenter.run,
-                               _progress={'total': 4, 'desc': 'Segment Trunk'})
-        worker.finished.connect(self.onSegmentationFinished)
-        self.deactivateButtons()
-        worker.start()
-
-
     def onRunSegmentRingsButtonPressed(self):
         print("Starting ring segmentation....")
         layer = self.getActiveLayer()
@@ -207,7 +193,7 @@ class SegmentTrunkWidget(QWidget):
         self.segmenter = TrunkSegmenter(layer)
         self.segmenter.measurements = self.measurements
         worker = create_worker(self.segmenter.run,
-                               _progress={'total': 4, 'desc': 'Segment Trunk'})
+                               _progress={'total': 15, 'desc': 'Segment Trunk'})
         worker.finished.connect(self.onSegmentationFinished)
         worker.start()
 

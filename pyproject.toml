@@ -27,12 +27,12 @@ dependencies = [
     "tree-ring-analyzer",
     "magicgui",
     "qtpy",
+    "pyqt5",
     "appdirs",
     "pyperclip",
     "shapelysmooth",
     "torch>=2.9",
     "torchvision",
-    "pint",
 ]
 
 [project.optional-dependencies]
@@ -42,19 +42,8 @@ testing = [
     "pytest-cov",  # https://pytest-cov.readthedocs.io/en/latest/
     "pytest-qt",  # https://pytest-qt.readthedocs.io/en/latest/
     "napari",
-    "pyqt5",
-    "qtpy",
-    "tree-ring-analyzer",
     "matplotlib",
-    "brightest-path-lib",
     "numpy",
-    "scikit-image",
-    "opencv-python-headless",
-    "pint",
-    "tifffile",
-    "tensorflow==2.17.0",
-    "python-polylabel",
-    "scikit-learn"
 ]
 
 docs = [    "sphinx_rtd_theme",

@@ -1,4 +1,6 @@
+import logging
 import math
+import time
 import os
 import cv2
 import appdirs
@@ -15,9 +17,6 @@ from napari_tree_rings.image.segmentation import SegmentTrunk
 from napari_tree_rings.image.file_util import TiffFileTags
 from napari_tree_rings.image.measure import MeasureShape
 from tree_ring_analyzer.segmentation import TreeRingSegmentation
-import tensorflow as tf
-import torch
-import torch.package
 import napari_tree_rings.config
 
 
@@ -82,13 +81,53 @@ class TrunkSegmenter(Segmenter):
         self.shapeLayer = None
 
 
-    def segment(self):
-        """Segment the trunk in FIJI and retrieve the result as a shape-layer. Sets the parent of the shape layer
-        to the image layer and copies the parent's path into its own metadata. So that they will be available for
-        the measure trunk method."""
-
+    def run(self):
+        """Run the trunk segmenter on the image. Yield between operations to allow to display the progress.
+        """
+        start_time = time.time()
+        print("started")
+        yield
+        print("1. set pixel size and unit")
+        self.setPixelSizeAndUnit()
+        yield
+        print("2. instantiate segment trunk operation")
         self.segmentTrunkOp = SegmentTrunk(self.layer)
-        self.segmentTrunkOp.run()
+        yield
+        print("3. convert image")
+        self.segmentTrunkOp.options = self.segmentTrunkOp.readOptions()
+        image = self.layer.data
+        image = self.segmentTrunkOp.convertImage(image)
+        shape = (image.shape[0], image.shape[1])
+        print("shape: " + str(shape))
+        yield
+        print("4. scale down")
+        image = self.segmentTrunkOp.scaleDownImage(image)
+        yield
+        print("5. threshold")
+        image = self.segmentTrunkOp.meanThresholdImage(image)
+        yield
+        print("6. keep largest region")
+        image = self.segmentTrunkOp.keep_largest_region(image)
+        yield
+        print("7. fill holes")
+        image = self.segmentTrunkOp.fillHolesImage(image)
+        yield
+        print("8. opening")
+        image = self.segmentTrunkOp.morphoOpenImage(image)
+        yield
+        print("9. scale up")
+        image = self.segmentTrunkOp.scaleUpMask(image, shape)
+        yield
+        print("10. erode")
+        image = self.segmentTrunkOp.morphoErodeImage(image)
+        yield
+        print("11. convex hull")
+        image = self.segmentTrunkOp.convexHullImage(image)
+        yield
+        print("12. create shapes")
+        self.segmentTrunkOp.result = self.segmentTrunkOp.createShapes(image)
+        yield
+        print("13. set metadata")
         shapeLayer = self.segmentTrunkOp.result
         shapeLayer.scale = tuple([self.layer.scale[0]] * shapeLayer.ndim)
         shapeLayer.units = tuple([self.layer.units[0]] * shapeLayer.ndim)
@@ -96,6 +135,63 @@ class TrunkSegmenter(Segmenter):
         shapeLayer.metadata['parent_path'] = self.layer.metadata['path']
         shapeLayer.name = 'trunk of ' + self.layer.name
         self.shapeLayer = shapeLayer
+        yield
+        print("14. measure", flush=True)
+        self.measureOp = MeasureShape(self.shapeLayer, object_type="trunk")
+        print("measure do", flush=True)
+        self.measureOp.do()
+        print("measure add to table", flush=True)
+        self.measureOp.addToTable(self.measurements)
+        print("finished", flush=True)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        minutes = elapsed_time // 60
+        seconds = elapsed_time % 60
+        print("Elapsed time: ", str(minutes)+":"+str(seconds))
+        yield
+
+
+
+    def segment(self):
+        """Segment the trunk in FIJI and retrieve the result as a shape-layer. Sets the parent of the shape layer
+        to the image layer and copies the parent's path into its own metadata. So that they will be available for
+        the measure trunk method."""
+
+
+        self.doSegment()
+        shapeLayer = self.segmentTrunkOp.result
+        shapeLayer.scale = tuple([self.layer.scale[0]] * shapeLayer.ndim)
+        shapeLayer.units = tuple([self.layer.units[0]] * shapeLayer.ndim)
+        shapeLayer.metadata['parent'] = self.layer
+        shapeLayer.metadata['parent_path'] = self.layer.metadata['path']
+        shapeLayer.name = 'trunk of ' + self.layer.name
+        self.shapeLayer = shapeLayer
+
+
+    def doSegment(self):
+        self.segmentTrunkOp.options = self.segmentTrunkOp.readOptions()
+        image = self.layer.data
+        shape = image.shape
+        image = self.segmentTrunkOp.convertImage(image)
+        yield
+        image = self.segmentTrunkOp.scaleDownImage(image)
+        yield
+        image = self.segmentTrunkOp.meanThresholdImage(image)
+        yield
+        image = self.segmentTrunkOp.keep_largest_region(image)
+        yield
+        image = self.segmentTrunkOp.fillHolesImage(image)
+        yield
+        image = self.segmentTrunkOp.morphoOpenImage(image)
+        yield
+        image = self.segmentTrunkOp.scaleUpMask(image, shape)
+        yield
+        image = self.segmentTrunkOp.morphoErodeImage(image)
+        yield
+        image = self.segmentTrunkOp.convexHullImage(image)
+        yield
+        self.segmentTrunkOp.result = self.segmentTrunkOp.createShapes(image)
+        yield
 
 
     def measure(self):
@@ -143,6 +239,7 @@ class RingsSegmenter(Segmenter):
     def segment(self):
         self.loadOptions()
         if self.options['method'] == 'Attention UNet':
+            import tensorflow as tf
             if self.ringsModel is None:
                 self.inbdModel = None
                 self.ringsModel = tf.keras.models.load_model(os.path.join(self.ringsModelsPath, self.options['ringsModel']), compile=False)
@@ -168,6 +265,7 @@ class RingsSegmenter(Segmenter):
             rings = self.ringToPolygons(segmentation.predictedRings)
             
         else:
+            import torch
             if self.inbdModel is None:
                 self.ringsModel = None
                 self.pithModel = None

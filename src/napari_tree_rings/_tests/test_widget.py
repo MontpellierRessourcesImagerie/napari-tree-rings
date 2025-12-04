@@ -29,7 +29,6 @@ def test_segment_trunk_widget(make_napari_viewer, tmp_path):
     my_widget = SegmentTrunkWidget(viewer)
 
     # call our widget method
-    my_widget.onRunButtonPressed()
     my_widget.onSegmentRingsOptionsButtonPressed()
     # my_widget.onRunSegmentRingsButtonPressed()
 

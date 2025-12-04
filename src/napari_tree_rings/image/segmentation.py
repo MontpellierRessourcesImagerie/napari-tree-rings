@@ -145,39 +145,92 @@ class SegmentTrunk(Operation):
         return options
 
 
+    @classmethod
+    def convertImage(cls, image):
+        result = None
+        if len(image.shape) == 3 and image.shape[-1] == 3:
+            result = rgb2gray(image)
+        elif len(image.shape) == 3 and image.shape[-1] == 1:
+            result = image[:, :, 0]
+        return result
+
+
+    def scaleDownImage(self, image):
+        result = rescale(image, 1.0 / self.options['scale'], anti_aliasing=True)
+        result = np.squeeze(result)
+        return result
+
+
+    @classmethod
+    def meanThresholdImage(cls, image):
+        thresh = threshold_mean(image)
+        result = (image < thresh) * 255
+        return result
+
+
+    @classmethod
+    def fillHolesImage(cls, image):
+        filled = binary_fill_holes(image) * 255
+        return filled
+
+
+    def morphoOpenImage(self, image):
+        se = morphology.disk(self.options['opening'])
+        opened = morphology.binary.binary_opening(image, se)
+        if len(np.unique(opened)) == 1:
+            opened = image / 255
+        return opened
+
+
+    @classmethod
+    def scaleUpMask(cls, image, shape):
+        out = resize(image, shape) * 1
+        out = out * 255
+        out = out.astype(np.uint8)
+        return out
+
+
+    def morphoErodeImage(self, image):
+        se2 = morphology.disk(self.options['scale'])
+        out = morphology.binary_erosion(image, se2)
+        return out
+
+
+    @classmethod
+    def convexHullImage(cls, image):
+        chull = convex_hull_image(image)
+        chull = chull * 255
+        chull = chull.astype(np.uint8)
+        return chull
+
+
+    @classmethod
+    def createShapes(cls, image):
+        contours, hierarchy = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        polys = [np.squeeze(e) for e in contours[0]]
+        changed = [np.array([y, x]) for x, y in polys]
+        smoothed = [np.array(taubin_smooth(changed))]
+        result = Shapes(smoothed, shape_type='polygon')
+        return result
+
+
     def run(self):
         """Read the options of the segment-trunk command, run the script-command with the read options in FIJI
         and retrieve the result image."""
 
         self.options = self.readOptions()
         image = self.layer.data
-        if len(image.shape) == 3 and image.shape[-1] == 3:
-            image = rgb2gray(image)
-        elif len(image.shape) == 3 and image.shape[-1] == 1:
-            image = image[:, :, 0]
-        small = rescale(image, 1.0 / self.options['scale'], anti_aliasing=True)
-        small = np.squeeze(small)
-        thresh = threshold_mean(small)
-        binary = (small < thresh) * 255
-        largest = self.keep_largest_region(binary)
-        filled = binary_fill_holes(largest) * 255
-        se = morphology.disk(self.options['opening'])
-        opened = morphology.binary.binary_opening(filled, se)
-        if len(np.unique(opened)) == 1:
-            opened = filled / 255
-        out = resize(opened, (image.shape[0], image.shape[1])) * 1
-        out = out * 255
-        out = out.astype(np.uint8)
-        se2 = morphology.disk(self.options['scale'])
-        out = morphology.binary_erosion(out, se2)
-        chull = convex_hull_image(out)
-        chull = chull * 255
-        chull = chull.astype(np.uint8)
-        contours, hierarchy = cv2.findContours(chull, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        polys = [np.squeeze(e) for e in contours[0]]
-        changed = [np.array([y, x]) for x, y in polys]
-        smoothed = [np.array(taubin_smooth(changed))]
-        self.result = Shapes(smoothed, shape_type='polygon')
+        shape = image.shape
+        image = self.convertImage(image)
+        image = self.scaleDownImage(image)
+        image = self.meanThresholdImage(image)
+        image = self.keep_largest_region(image)
+        image =self.fillHolesImage(image)
+        image = self.morphoOpenImage(image)
+        image = self.scaleUpMask(image, shape)
+        image = self.morphoErodeImage(image)
+        image = self.convexHullImage(image)
+        self.result = self.createShapes(image)
 
 
     @classmethod
